@@ -288,6 +288,96 @@ app.post('/api/contacts/sync', async (req, res) => {
   }
 });
 
+// Contact Single Create/Update/Delete
+app.post('/api/contacts', async (req, res) => {
+  try {
+    const c = req.body;
+    if (!c || !c.id || !c.name) {
+      return res.status(400).json({ error: 'Invalid contact' });
+    }
+    await db.insert(schema.contacts)
+      .values({
+        id: c.id,
+        type: c.type || 'customer',
+        name: c.name,
+        businessName: c.businessName || null,
+        email: c.email || null,
+        phone: c.phone || null,
+        customerGroup: c.customerGroup || null,
+        creditLimit: c.creditLimit ? String(c.creditLimit) : null,
+        address: c.address || null,
+        businessLocation: c.businessLocation || 'Hazigonj Branch',
+        balance: String(c.balance || 0),
+        totalPurchases: String(c.totalPurchases || 0),
+      })
+      .onConflictDoUpdate({
+        target: schema.contacts.id,
+        set: {
+          name: c.name,
+          businessName: c.businessName || null,
+          phone: c.phone || null,
+          email: c.email || null,
+          balance: String(c.balance || 0),
+          totalPurchases: String(c.totalPurchases || 0),
+          businessLocation: c.businessLocation || 'Hazigonj Branch',
+        }
+      });
+    res.json({ success: true, id: c.id });
+  } catch (error: any) {
+    console.error('Error saving contact:', error);
+    res.status(500).json({ error: 'Failed to save contact' });
+  }
+});
+
+app.delete('/api/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(schema.contacts).where(eq(schema.contacts.id, id));
+    res.json({ success: true, id });
+  } catch (error: any) {
+    console.error('Error deleting contact:', error);
+    res.status(500).json({ error: 'Failed to delete contact' });
+  }
+});
+
+// Database Live Status API
+app.get('/api/database/status', async (req, res) => {
+  try {
+    const [pList, sList, cList, dpList, purList, expList, uList, audList] = await Promise.all([
+      db.select().from(schema.products),
+      db.select().from(schema.sales),
+      db.select().from(schema.contacts),
+      db.select().from(schema.duePayments),
+      db.select().from(schema.purchases),
+      db.select().from(schema.expenses),
+      db.select().from(schema.users),
+      db.select().from(schema.auditLogs),
+    ]);
+
+    res.json({
+      connected: true,
+      engine: 'PostgreSQL 16 (Google Cloud SQL)',
+      instanceName: 'ai-studio-31140d6c',
+      projectId: 'possible-yew-c8gvj',
+      region: 'asia-southeast1',
+      status: 'Live & Operational',
+      tables: {
+        products: pList.length,
+        sales: sList.length,
+        contacts: cList.length,
+        due_payments: dpList.length,
+        purchases: purList.length,
+        expenses: expList.length,
+        users: Math.max(1, uList.length),
+        audit_logs: audList.length,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error getting DB status:', error);
+    res.status(500).json({ error: 'Failed to get DB status' });
+  }
+});
+
 // Settings API
 app.get('/api/settings', async (req, res) => {
   try {

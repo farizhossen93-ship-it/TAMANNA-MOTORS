@@ -20,7 +20,8 @@ import {
   Sparkles,
   Layers,
   CircleDot,
-  CreditCard
+  CreditCard,
+  Database
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 import { BusinessSettings } from '../types';
@@ -117,6 +118,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'synced-dues',
       labelKey: lang === 'bn' ? 'বকেয়া ও দেনা-পাওনা' : 'Synced Dues Ledger',
       icon: <CreditCard className="h-4 w-4 shrink-0 text-rose-500" />,
+      category: 'core'
+    },
+    {
+      id: 'cloud-database',
+      labelKey: lang === 'bn' ? 'ক্লাউড ডেটাবেজ (Cloud SQL)' : 'Cloud SQL Database',
+      icon: <Database className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />,
       category: 'core'
     },
     {

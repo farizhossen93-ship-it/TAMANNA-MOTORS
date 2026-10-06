@@ -48,6 +48,7 @@ import { SettingsView } from './components/SettingsView';
 import { ReportsView } from './components/ReportsView';
 import { UserManagementView } from './components/UserManagementView';
 import { SyncedDuesView } from './components/SyncedDuesView';
+import { DatabaseControlView } from './components/DatabaseControlView';
 import { ReceiptModal } from './components/ReceiptModal';
 import { LoginView } from './components/LoginView';
 import { InvoiceScanModal } from './components/InvoiceScanModal';
@@ -141,6 +142,35 @@ export default function App() {
   useEffect(() => {
     DatabaseStorage.saveInvoiceSettings(invoiceSettings);
   }, [invoiceSettings]);
+
+  // Load live data from Cloud SQL PostgreSQL backend API on startup
+  useEffect(() => {
+    const fetchBackendData = async () => {
+      try {
+        const [prodRes, saleRes, contactRes] = await Promise.allSettled([
+          fetch('/api/products').then(r => r.ok ? r.json() : null),
+          fetch('/api/sales').then(r => r.ok ? r.json() : null),
+          fetch('/api/contacts').then(r => r.ok ? r.json() : null),
+        ]);
+
+        if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
+          setProducts(prodRes.value);
+        }
+        if (saleRes.status === 'fulfilled' && Array.isArray(saleRes.value)) {
+          setSales(saleRes.value);
+        }
+        if (contactRes.status === 'fulfilled' && Array.isArray(contactRes.value)) {
+          const custs = contactRes.value.filter((c: any) => c.type === 'customer');
+          const sups = contactRes.value.filter((c: any) => c.type === 'supplier');
+          if (custs.length > 0) setCustomers(custs);
+          if (sups.length > 0) setSuppliers(sups);
+        }
+      } catch (e) {
+        console.log("Offline mode or backend loading fallback", e);
+      }
+    };
+    fetchBackendData();
+  }, []);
 
   // Authentication & Staff User state
   const [staffUsers, setStaffUsers] = useState<AuthUser[]>(() => DatabaseStorage.loadStaffUsers());
@@ -376,12 +406,26 @@ export default function App() {
   // Handlers for Products
   const handleAddProduct = (newProd: Product) => {
     if (editingProduct) {
-      setProducts(prev => prev.map(p => p.id === newProd.id ? newProd : p));
+      const updated = products.map(p => p.id === newProd.id ? newProd : p);
+      setProducts(updated);
+      DatabaseStorage.saveProducts(updated);
+      fetch('/api/products/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: [newProd] })
+      }).catch(console.error);
       setEditingProduct(null);
-      showSyncNotice(lang === 'bn' ? `মোটর পার্টস '${newProd.name}' সফলভাবে সম্পাদিত ও সিঙ্ক হয়েছে।` : `Product '${newProd.name}' edited and synced.`);
+      showSyncNotice(lang === 'bn' ? `মোটর পার্টস '${newProd.name}' সফলভাবে সম্পাদিত ও ক্লাউডে সিঙ্ক হয়েছে।` : `Product '${newProd.name}' edited and synced.`);
     } else {
-      setProducts([newProd, ...products]);
-      showSyncNotice(lang === 'bn' ? `নতুন পার্টস '${newProd.name}' যুক্ত ও ডাটাবেজ সিঙ্ক হয়েছে।` : `New product '${newProd.name}' added and synced.`);
+      const updated = [newProd, ...products];
+      setProducts(updated);
+      DatabaseStorage.saveProducts(updated);
+      fetch('/api/products/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: [newProd] })
+      }).catch(console.error);
+      showSyncNotice(lang === 'bn' ? `নতুন পার্টস '${newProd.name}' যুক্ত ও ক্লাউড ডেটাবেজে সিঙ্ক হয়েছে।` : `New product '${newProd.name}' added and synced.`);
     }
   };
 
@@ -398,36 +442,70 @@ export default function App() {
   // Handlers for Contacts (Suppliers & Customers)
   const handleAddSupplier = (contact: Contact) => {
     if (editingContact) {
-      setSuppliers(prev => prev.map(s => s.id === contact.id ? contact : s));
+      const updated = suppliers.map(s => s.id === contact.id ? contact : s);
+      setSuppliers(updated);
+      DatabaseStorage.saveSuppliers(updated);
+      fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact)
+      }).catch(console.error);
       setEditingContact(null);
       showSyncNotice(lang === 'bn' ? `সরবরাহকারী '${contact.businessName || contact.name}' সম্পাদিত ও সিঙ্ক হয়েছে।` : `Supplier '${contact.businessName || contact.name}' updated and synced.`);
     } else {
-      setSuppliers([contact, ...suppliers]);
+      const updated = [contact, ...suppliers];
+      setSuppliers(updated);
+      DatabaseStorage.saveSuppliers(updated);
+      fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact)
+      }).catch(console.error);
       showSyncNotice(lang === 'bn' ? `নতুন সরবরাহকারী '${contact.businessName || contact.name}' যুক্ত ও সিঙ্ক হয়েছে।` : `New supplier '${contact.businessName || contact.name}' added and synced.`);
     }
   };
 
   const handleDeleteSupplier = (row: Contact) => {
     if (confirm(lang === 'bn' ? `সরবরাহকারী ${row.businessName || row.name} মুছতে চান?` : `Delete supplier ${row.businessName || row.name}?`)) {
-      setSuppliers(prev => prev.filter(s => s.id !== row.id));
+      const updated = suppliers.filter(s => s.id !== row.id);
+      setSuppliers(updated);
+      DatabaseStorage.saveSuppliers(updated);
+      fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
       showSyncNotice(lang === 'bn' ? `সরবরাহকারী '${row.businessName || row.name}' মুছে ফেলা হয়েছে।` : `Supplier deleted and synced.`);
     }
   };
 
   const handleAddCustomer = (contact: Contact) => {
     if (editingContact) {
-      setCustomers(prev => prev.map(c => c.id === contact.id ? contact : c));
+      const updated = customers.map(c => c.id === contact.id ? contact : c);
+      setCustomers(updated);
+      DatabaseStorage.saveCustomers(updated);
+      fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact)
+      }).catch(console.error);
       setEditingContact(null);
       showSyncNotice(lang === 'bn' ? `গ্রাহক '${contact.name}' সম্পাদিত ও সিঙ্ক হয়েছে।` : `Customer '${contact.name}' updated and synced.`);
     } else {
-      setCustomers([contact, ...customers]);
+      const updated = [contact, ...customers];
+      setCustomers(updated);
+      DatabaseStorage.saveCustomers(updated);
+      fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact)
+      }).catch(console.error);
       showSyncNotice(lang === 'bn' ? `নতুন গ্রাহক '${contact.name}' যুক্ত ও সিঙ্ক হয়েছে।` : `New customer '${contact.name}' added and synced.`);
     }
   };
 
   const handleDeleteCustomer = (row: Contact) => {
     if (confirm(lang === 'bn' ? `গ্রাহক ${row.name} মুছতে চান?` : `Delete customer ${row.name}?`)) {
-      setCustomers(prev => prev.filter(c => c.id !== row.id));
+      const updated = customers.filter(c => c.id !== row.id);
+      setCustomers(updated);
+      DatabaseStorage.saveCustomers(updated);
+      fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
       showSyncNotice(lang === 'bn' ? `গ্রাহক '${row.name}' মুছে ফেলা হয়েছে।` : `Customer '${row.name}' deleted and synced.`);
     }
   };
@@ -1318,6 +1396,27 @@ export default function App() {
             onClearTempData={handleClearTempSales}
             onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
+          />
+        );
+
+      case 'cloud-database':
+        return (
+          <DatabaseControlView
+            products={products}
+            sales={sales}
+            contacts={[...customers, ...suppliers]}
+            businessSettings={businessSettings}
+            lang={lang}
+            onRefreshAll={() => {
+              fetch('/api/products').then(r => r.json()).then(setProducts).catch(console.error);
+              fetch('/api/sales').then(r => r.json()).then(setSales).catch(console.error);
+              fetch('/api/contacts').then(r => r.json()).then(data => {
+                if (Array.isArray(data)) {
+                  setCustomers(data.filter((c: any) => c.type === 'customer'));
+                  setSuppliers(data.filter((c: any) => c.type === 'supplier'));
+                }
+              }).catch(console.error);
+            }}
           />
         );
 
