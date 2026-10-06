@@ -49,7 +49,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({
       setCustomerGroup('Standard Retail');
       setCreditLimit('');
       setAddress('');
-      setLocation('Dhaka Central Showroom');
+      setLocation('Hazigonj Branch');
     }
     setError(null);
   }, [initialContact, isOpen]);
@@ -245,7 +245,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder={lang === 'bn' ? 'মিরপুর-১০, ঢাকা-১২১৬' : 'Plot 4, Mirpur-10, Dhaka'}
+              placeholder={lang === 'bn' ? 'পশ্চিম বাজার, হাজীগঞ্জ, চাঁদপুর' : 'West Bazar, Hazigonj, Chandpur'}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
             />
           </div>

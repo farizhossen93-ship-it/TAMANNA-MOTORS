@@ -22,8 +22,8 @@ export interface InvoiceQrDataOptions {
 export function formatInvoiceQrText(opts: InvoiceQrDataOptions): string {
   const provider = opts.providerName || 'TAMANNA MOTORS';
   const currency = opts.currencySymbol || '৳';
-  const branch = opts.branch || 'Dhaka Central Showroom';
-  const phone = opts.providerPhone || '+880 1711-234567';
+  const branch = opts.branch || 'Hazigonj Branch, Chandpur';
+  const phone = opts.providerPhone || '01626666906, 01878934956';
   const customer = opts.customerName || 'Walk-in Customer';
   const payment = opts.paymentMethod || 'Cash';
   const formattedPrice = `${currency}${opts.totalPrice.toFixed(0)}`;

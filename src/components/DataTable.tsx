@@ -179,7 +179,7 @@ export function DataTable<T extends Record<string, any>>({
               <p style="margin: 3px 0 0 0; font-size: 13px; font-weight: 600; color: #047857;">${title}</p>
             </div>
             <div style="text-align: right; font-size: 11px; color: #666;">
-              <div style="font-weight: bold;">Dhaka Central Showroom · Mirpur-10</div>
+              <div style="font-weight: bold;">Hazigonj Branch · Chandpur</div>
               <div>Printed: ${new Date().toLocaleString()}</div>
             </div>
           </div>
@@ -208,7 +208,7 @@ export function DataTable<T extends Record<string, any>>({
               <p style="margin: 3px 0 0 0; font-size: 13px; font-weight: 600; color: #047857;">${title}</p>
             </div>
             <div style="text-align: right; font-size: 11px; color: #666;">
-              <div style="font-weight: bold;">Dhaka Central Showroom · Mirpur-10</div>
+              <div style="font-weight: bold;">Hazigonj Branch · Chandpur</div>
               <div>Generated: ${new Date().toLocaleString()}</div>
             </div>
           </div>

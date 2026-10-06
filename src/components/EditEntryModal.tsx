@@ -41,7 +41,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
   const [note, setNote] = useState('');
 
   // Common fields
-  const [location, setLocation] = useState('Dhaka Central Showroom');
+  const [location, setLocation] = useState('Hazigonj Branch');
 
   useEffect(() => {
     if (!entry) return;

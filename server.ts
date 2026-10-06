@@ -109,6 +109,27 @@ app.post('/api/products/sync', async (req, res) => {
   }
 });
 
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(schema.products).where(eq(schema.products.id, id));
+    res.json({ success: true, id });
+  } catch (error: any) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+app.delete('/api/products', async (req, res) => {
+  try {
+    await db.delete(schema.products);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting all products:', error);
+    res.status(500).json({ error: 'Failed to delete all products' });
+  }
+});
+
 // Sales & Due Management API
 app.get('/api/sales', async (req, res) => {
   try {

@@ -387,7 +387,10 @@ export default function App() {
 
   const handleDeleteProduct = (prod: Product) => {
     if (confirm(lang === 'bn' ? `${prod.name} মুছে ফেলতে চান?` : `Are you sure you want to delete ${prod.name}?`)) {
-      setProducts(prev => prev.filter(p => p.id !== prod.id));
+      const updated = products.filter(p => p.id !== prod.id);
+      setProducts(updated);
+      DatabaseStorage.saveProducts(updated);
+      fetch(`/api/products/${prod.id}`, { method: 'DELETE' }).catch(err => console.error(err));
       showSyncNotice(lang === 'bn' ? `'${prod.name}' মুছে ফেলা হয়েছে এবং ডাটাবেজ সিঙ্ক হয়েছে।` : `'${prod.name}' deleted and synced.`);
     }
   };
@@ -522,6 +525,7 @@ export default function App() {
   };
 
   const handleClearAllMockData = () => {
+    setProducts([]);
     setSales([]);
     setPurchases([]);
     setExpenses([]);
@@ -530,6 +534,7 @@ export default function App() {
     setStockTransfers([]);
     setSuppliers([]);
     setCustomers(INITIAL_TAMANNA_CUSTOMERS);
+    DatabaseStorage.saveProducts([]);
     DatabaseStorage.saveSales([]);
     DatabaseStorage.savePurchases([]);
     DatabaseStorage.saveExpenses([]);
@@ -537,7 +542,8 @@ export default function App() {
     DatabaseStorage.saveCustomers(INITIAL_TAMANNA_CUSTOMERS);
     DatabaseStorage.saveAuditLogs([]);
     DatabaseStorage.saveDeleteRequests([]);
-    showSyncNotice(lang === 'bn' ? 'সকল অস্থায়ী ও ডেমো ডেটা সফলভাবে মুছে ফেলা হয়েছে এবং সিস্টেম ব্যবহারের জন্য সম্পূর্ণ প্রস্তুত।' : 'All temporary & mock data cleared successfully and system is ready to use.');
+    fetch('/api/products', { method: 'DELETE' }).catch(err => console.error(err));
+    showSyncNotice(lang === 'bn' ? 'সকল পণ্য ও ডেমো ডেটা সফলভাবে মুছে ফেলা হয়েছে এবং সিস্টেম ব্যবহারের জন্য সম্পূর্ণ প্রস্তুত।' : 'All products and temporary data cleared successfully and system is ready to use.');
   };
 
   const handleRefreshDatabase = () => {

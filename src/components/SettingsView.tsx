@@ -218,7 +218,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
             </div>
             <span className="text-xs font-bold text-slate-900 dark:text-white mt-2">TAMANNA MOTORS</span>
-            <span className="text-[10px] text-slate-500">Dhaka Central Showroom</span>
+            <span className="text-[10px] text-slate-500">Hazigonj Branch · Chandpur</span>
 
             {customLogoUrl && (
               <button

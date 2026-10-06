@@ -25,112 +25,7 @@ export const TAMANNA_INVOICE_SETTINGS: InvoiceSettings = {
   logoUrl: ""
 };
 
-export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
-  {
-    id: "tm-prod-1",
-    name: "Motul 7100 4T 10W-40 100% Synthetic 1L",
-    sku: "MOT-4T-10W40",
-    category: "Engine Oil & Lubricants",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 1250,
-    sellingPrice: 1550,
-    currentStock: 48,
-    alertQuantity: 10,
-    imageUrl: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-08-14"
-  },
-  {
-    id: "tm-prod-2",
-    name: "NGK Laser Iridium Spark Plug CR9EIA-9",
-    sku: "NGK-CR9EIA9",
-    category: "Electrical & Ignition",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 680,
-    sellingPrice: 950,
-    currentStock: 32,
-    alertQuantity: 8,
-    imageUrl: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-08-20"
-  },
-  {
-    id: "tm-prod-3",
-    name: "Brembo Sintered Front Disc Brake Pads Set",
-    sku: "BRM-BP-FR01",
-    category: "Brakes & Suspension",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 920,
-    sellingPrice: 1350,
-    currentStock: 18,
-    alertQuantity: 5,
-    imageUrl: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-01"
-  },
-  {
-    id: "tm-prod-4",
-    name: "Exide Xplore 12V 5Ah Maintenance-Free Battery",
-    sku: "EXD-12V5AH-MF",
-    category: "Batteries & Power",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 1850,
-    sellingPrice: 2400,
-    currentStock: 14,
-    alertQuantity: 5,
-    imageUrl: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-05"
-  },
-  {
-    id: "tm-prod-5",
-    name: "MRF Zapper-FS 90/90-17 Tubeless Front Tyre",
-    sku: "MRF-TYR-909017",
-    category: "Tyres & Tubes",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 2800,
-    sellingPrice: 3450,
-    currentStock: 9,
-    alertQuantity: 4,
-    imageUrl: "https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-12"
-  },
-  {
-    id: "tm-prod-6",
-    name: "DID 428-130L Heavy Duty Drive Chain & Sprocket",
-    sku: "DID-428-130L",
-    category: "Transmission & Drivetrain",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 1650,
-    sellingPrice: 2200,
-    currentStock: 22,
-    alertQuantity: 6,
-    imageUrl: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-15"
-  },
-  {
-    id: "tm-prod-7",
-    name: "Bosch FC4 Disc Dual-Tone 12V Horn Set",
-    sku: "BSH-HRN-12V",
-    category: "Electrical & Ignition",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 850,
-    sellingPrice: 1250,
-    currentStock: 25,
-    alertQuantity: 6,
-    imageUrl: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-18"
-  },
-  {
-    id: "tm-prod-8",
-    name: "K&N High-Flow Washable Air Filter",
-    sku: "KN-FLT-YA01",
-    category: "Filters & Intake",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 1400,
-    sellingPrice: 1950,
-    currentStock: 16,
-    alertQuantity: 4,
-    imageUrl: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-22"
-  }
-];
+export const INITIAL_TAMANNA_PRODUCTS: Product[] = [];
 
 export const INITIAL_TAMANNA_SUPPLIERS: Contact[] = [];
 
@@ -176,9 +71,11 @@ export const DatabaseStorage = {
   loadProducts(): Product[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      return data ? JSON.parse(data) : INITIAL_TAMANNA_PRODUCTS;
+      if (!data) return [];
+      const parsed: Product[] = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed.filter(p => p && p.id && !p.id.startsWith('tm-prod-') && !p.id.startsWith('prod-')) : [];
     } catch {
-      return INITIAL_TAMANNA_PRODUCTS;
+      return [];
     }
   },
 
