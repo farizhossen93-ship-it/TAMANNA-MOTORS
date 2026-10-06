@@ -1,0 +1,6 @@
+{
+  "name": "ApexPOS & Inventory System",
+  "description": "Enterprise Point of Sale (POS) and inventory management system with real-time stock tracking, sales analytics, purchase orders, and multi-location management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
