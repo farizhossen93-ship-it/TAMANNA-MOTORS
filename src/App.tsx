@@ -529,11 +529,15 @@ export default function App() {
     setPurchaseReturns([]);
     setStockTransfers([]);
     setSuppliers([]);
+    setCustomers(INITIAL_TAMANNA_CUSTOMERS);
     DatabaseStorage.saveSales([]);
     DatabaseStorage.savePurchases([]);
     DatabaseStorage.saveExpenses([]);
     DatabaseStorage.saveSuppliers([]);
-    showSyncNotice(lang === 'bn' ? 'সকল ডেমো ডাটা সফলভাবে মুছে ফেলা হয়েছে।' : 'All mock/demo data cleared successfully.');
+    DatabaseStorage.saveCustomers(INITIAL_TAMANNA_CUSTOMERS);
+    DatabaseStorage.saveAuditLogs([]);
+    DatabaseStorage.saveDeleteRequests([]);
+    showSyncNotice(lang === 'bn' ? 'সকল অস্থায়ী ও ডেমো ডেটা সফলভাবে মুছে ফেলা হয়েছে এবং সিস্টেম ব্যবহারের জন্য সম্পূর্ণ প্রস্তুত।' : 'All temporary & mock data cleared successfully and system is ready to use.');
   };
 
   const handleRefreshDatabase = () => {

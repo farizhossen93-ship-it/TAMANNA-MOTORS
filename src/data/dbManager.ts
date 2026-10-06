@@ -139,131 +139,16 @@ export const INITIAL_TAMANNA_CUSTOMERS: Contact[] = [
     id: "cust-walkin",
     type: "customer",
     name: "Walk-in Customer (খুচরা ক্রেতা)",
-    email: "retail@tamannamotors.com",
-    phone: "01711000000",
+    email: "",
+    phone: "01700000000",
     customerGroup: "Retail",
     businessLocation: "Hazigonj Branch",
     balance: 0.00,
-    totalPurchases: 2400.00
-  },
-  {
-    id: "cust-1",
-    type: "customer",
-    name: "Md. Rafiqul Islam (রফিকুল ইসলাম - মেকানিক)",
-    email: "rafiq.mechanic@gmail.com",
-    phone: "01819234567",
-    customerGroup: "Wholesale",
-    businessLocation: "Hazigonj Branch",
-    balance: 2200.00,
-    totalPurchases: 28500.00
-  },
-  {
-    id: "cust-2",
-    type: "customer",
-    name: "Haji Nurul Huda (হাজী নুরুল হুদা)",
-    email: "haji.nurul@gmail.com",
-    phone: "01722889900",
-    customerGroup: "VIP Fleet",
-    businessLocation: "Hazigonj Branch",
-    balance: 3450.00,
-    totalPurchases: 42000.00
+    totalPurchases: 0.00
   }
 ];
 
-export const INITIAL_TAMANNA_SALES: Sale[] = [
-  {
-    id: "sale-101",
-    invoiceNo: "TM-2026-1001",
-    type: "pos",
-    customerName: "Md. Rafiqul Islam (মেকানিক)",
-    customerPhone: "01819234567",
-    businessLocation: "Hazigonj Branch",
-    paymentStatus: "Partial",
-    paymentMethod: "Cash",
-    totalAmount: 5200,
-    invoiceDue: 2200,
-    saleDate: new Date(Date.now() - 86400000 * 2).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
-    itemsCount: 3,
-    subtotal: 4952,
-    taxAmount: 248,
-    discountAmount: 0,
-    amountTendered: 3000,
-    changeDue: 0,
-    dueNotes: "বাকি টাকা আগামী সপ্তাহে পরিশোধ করবেন",
-    duePayments: [
-      {
-        id: "dp-1",
-        paymentDate: new Date(Date.now() - 86400000).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
-        amountPaid: 1000,
-        paymentMethod: "bKash/Nagad",
-        remainingDue: 2200,
-        receivedBy: "Authorized Cashier",
-        notes: "বিকাশে ১০০০ টাকা জমা দিলেন"
-      }
-    ],
-    items: [
-      {
-        product: INITIAL_TAMANNA_PRODUCTS[0],
-        quantity: 2
-      },
-      {
-        product: INITIAL_TAMANNA_PRODUCTS[1],
-        quantity: 2
-      }
-    ]
-  },
-  {
-    id: "sale-102",
-    invoiceNo: "TM-2026-1002",
-    type: "pos",
-    customerName: "Haji Nurul Huda",
-    customerPhone: "01722889900",
-    businessLocation: "Hazigonj Branch",
-    paymentStatus: "Due",
-    paymentMethod: "Credit",
-    totalAmount: 3450,
-    invoiceDue: 3450,
-    saleDate: new Date(Date.now() - 86400000 * 1).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
-    itemsCount: 1,
-    subtotal: 3285,
-    taxAmount: 165,
-    discountAmount: 0,
-    amountTendered: 0,
-    changeDue: 0,
-    dueNotes: "টায়ার পরিবর্তন বাকি",
-    items: [
-      {
-        product: INITIAL_TAMANNA_PRODUCTS[4],
-        quantity: 1
-      }
-    ]
-  },
-  {
-    id: "sale-103",
-    invoiceNo: "TM-2026-1003",
-    type: "pos",
-    customerName: "Walk-in Customer",
-    customerPhone: "01711000000",
-    businessLocation: "Hazigonj Branch",
-    paymentStatus: "Paid",
-    paymentMethod: "Cash",
-    totalAmount: 2400,
-    invoiceDue: 0,
-    saleDate: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
-    itemsCount: 1,
-    subtotal: 2285,
-    taxAmount: 115,
-    discountAmount: 0,
-    amountTendered: 2400,
-    changeDue: 0,
-    items: [
-      {
-        product: INITIAL_TAMANNA_PRODUCTS[3],
-        quantity: 1
-      }
-    ]
-  }
-];
+export const INITIAL_TAMANNA_SALES: Sale[] = [];
 
 export const INITIAL_TAMANNA_PURCHASES: Purchase[] = [];
 

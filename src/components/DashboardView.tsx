@@ -77,7 +77,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const last7DaysSalesData = useMemo(() => {
     const daysArr = [];
     const now = new Date();
-    const fallbackAmounts = [24500, 31200, 28900, 39400, 34800, 48200, 42750];
 
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -100,18 +99,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         }
       });
 
-      const actualSum = daySales.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
+      const actualSum = daySales.reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0);
       const actualInvoices = daySales.length;
-
-      const finalAmount = actualSum > 0 ? actualSum : fallbackAmounts[6 - i];
-      const finalInvoices = actualInvoices > 0 ? actualInvoices : Math.round(finalAmount / 2150);
 
       daysArr.push({
         day: dayName,
         date: dateFormatted,
-        totalSales: finalAmount,
-        invoices: finalInvoices,
-        avgTicket: Math.round(finalAmount / (finalInvoices || 1))
+        totalSales: actualSum,
+        invoices: actualInvoices,
+        avgTicket: actualInvoices > 0 ? Math.round(actualSum / actualInvoices) : 0
       });
     }
     return daysArr;
@@ -132,13 +128,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   );
 
   // Key metrics calculation for TAMANNA MOTORS (in BDT ৳)
-  const totalSalesValue = 485250.00;
-  const netSalesValue = 462720.00;
-  const invoiceDueValue = 38530.00;
-  const totalPurchaseValue = 312400.00;
-  const purchaseDueValue = 28850.00;
-  const totalPurchaseReturnValue = 8210.00;
-  const totalExpensesValue = 34680.00;
+  const totalSalesValue = useMemo(() => 
+    (sales || []).reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0),
+    [sales]
+  );
+  const netSalesValue = useMemo(() => 
+    (sales || []).reduce((acc, s) => acc + ((Number(s.totalAmount) || 0) - (Number(s.taxAmount) || 0)), 0),
+    [sales]
+  );
+  const invoiceDueValue = useMemo(() => 
+    (sales || []).reduce((acc, s) => acc + (Number(s.invoiceDue) || 0), 0),
+    [sales]
+  );
+  const totalPurchaseValue = 0.00;
+  const purchaseDueValue = 0.00;
+  const totalPurchaseReturnValue = 0.00;
+  const totalExpensesValue = 0.00;
 
   // Chart coordinate calculations
   const chartHeight = 220;
