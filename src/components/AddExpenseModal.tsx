@@ -16,7 +16,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [category, setCategory] = useState<Expense['category']>('Utilities');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [location, setLocation] = useState('Main Branch');
+  const [location, setLocation] = useState('Hazigonj Branch');
   const [referenceNo, setReferenceNo] = useState('');
   const [note, setNote] = useState('');
 
@@ -119,9 +119,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 p-2 focus:border-slate-500 focus:outline-none"
               >
-                <option value="Main Branch">Main Branch</option>
-                <option value="Downtown Store">Downtown Store</option>
-                <option value="Westside Hub">Westside Hub</option>
+                <option value="Hazigonj Branch">Hazigonj Branch (হাজীগঞ্জ শাখা)</option>
               </select>
             </div>
           </div>

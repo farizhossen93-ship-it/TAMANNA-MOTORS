@@ -28,7 +28,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({
   const [customerGroup, setCustomerGroup] = useState('Standard Retail');
   const [creditLimit, setCreditLimit] = useState('');
   const [address, setAddress] = useState('');
-  const [location, setLocation] = useState('Dhaka Central Showroom');
+  const [location, setLocation] = useState('Hazigonj Branch');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({
       setCustomerGroup(initialContact.customerGroup || 'Standard Retail');
       setCreditLimit(initialContact.creditLimit?.toString() || '');
       setAddress(initialContact.address || '');
-      setLocation(initialContact.businessLocation || 'Dhaka Central Showroom');
+      setLocation(initialContact.businessLocation || 'Hazigonj Branch');
     } else {
       setName('');
       setBusinessName('');
@@ -232,10 +232,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
               >
-                <option value="Dhaka Central Showroom">Dhaka Central Showroom · Mirpur-10</option>
-                <option value="Mirpur Branch">Mirpur Workshop Hub</option>
-                <option value="Uttara Branch">Uttara Regional Outlet</option>
-                <option value="Chittagong Hub">Chittagong Port Depot</option>
+                <option value="Hazigonj Branch">Hazigonj Branch (হাজীগঞ্জ প্রধান শাখা)</option>
               </select>
             </div>
           )}

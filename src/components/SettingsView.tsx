@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Settings, Save, CheckCircle, AlertCircle, Building2, Percent, DollarSign, Upload, Image, Trash2, Sparkles, RefreshCw, Eye } from 'lucide-react';
+import { Settings, Save, CheckCircle, AlertCircle, Building2, Percent, DollarSign, Upload, Image, Trash2, Sparkles, RefreshCw, Eye, Database, Cloud, Wifi, Shield } from 'lucide-react';
 import { BusinessSettings, InvoiceSettings } from '../types';
 import { Language, TRANSLATIONS } from '../i18n/translations';
+import { loadSupabaseConfig, saveSupabaseConfig, testSupabaseConnection, isSupabaseConfigured, SupabaseConfig } from '../data/supabaseClient';
 
 interface SettingsViewProps {
   type: 'business' | 'invoice';
@@ -11,27 +12,9 @@ interface SettingsViewProps {
   onSaveInvoice: (settings: InvoiceSettings) => void;
   lang?: Language;
   onClearTempData?: () => void;
+  onClearAllMockData?: () => void;
   onResetDatabase?: () => void;
 }
-
-const PRESET_LOGOS = [
-  {
-    name: "Classic Motor Bike",
-    url: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=150&h=150&q=80"
-  },
-  {
-    name: "Racing Superbike",
-    url: "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=150&h=150&q=80"
-  },
-  {
-    name: "Golden Gear Workshop",
-    url: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=150&h=150&q=80"
-  },
-  {
-    name: "Speed Performance Badge",
-    url: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=150&h=150&q=80"
-  }
-];
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   type,
@@ -41,6 +24,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSaveInvoice,
   lang = 'en',
   onClearTempData,
+  onClearAllMockData,
   onResetDatabase
 }) => {
   const t = TRANSLATIONS[lang];
@@ -50,6 +34,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [customLogoUrl, setCustomLogoUrl] = useState<string>(businessSettings.logoUrl || '');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Supabase Integration state
+  const [supabaseCfg, setSupabaseCfg] = useState<SupabaseConfig>(() => loadSupabaseConfig());
+  const [supabaseTesting, setSupabaseTesting] = useState(false);
+  const [supabaseNotice, setSupabaseNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleTestSupabase = async () => {
+    saveSupabaseConfig(supabaseCfg);
+    setSupabaseTesting(true);
+    setSupabaseNotice(null);
+    const res = await testSupabaseConnection();
+    setSupabaseTesting(false);
+    if (res.success) {
+      setSupabaseNotice({ type: 'success', text: res.message });
+    } else {
+      setSupabaseNotice({ type: 'error', text: res.message });
+    }
+    setTimeout(() => setSupabaseNotice(null), 5000);
+  };
+
+  const handleSaveSupabase = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveSupabaseConfig(supabaseCfg);
+    setSavedMessage(lang === 'bn' ? 'Supabase কনফিগারেশন সংরক্ষিত হয়েছে।' : 'Supabase configuration saved.');
+    setTimeout(() => setSavedMessage(null), 3500);
+  };
 
   // Instant logo saver across both business and invoice configs
   const handleSaveLogoOnly = (newLogoUrl?: string) => {
@@ -113,10 +123,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleApplyPresetLogo = (url: string) => {
-    handleSaveLogoOnly(url);
   };
 
   const handleRemoveLogo = () => {
@@ -278,27 +284,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* Preset Motor Logos */}
-            <div>
-              <span className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                {lang === 'bn' ? 'মোটরসাইকেল ব্র্যান্ড লোগো প্রি-সেটসমূহ:' : 'Or Select Automotive Preset Logo:'}
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {PRESET_LOGOS.map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => handleApplyPresetLogo(preset.url)}
-                    className={`flex items-center gap-2 rounded-lg border p-1.5 text-left transition-all ${
-                      customLogoUrl === preset.url
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
-                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <img src={preset.url} alt={preset.name} className="h-6 w-6 rounded-md object-cover shrink-0" />
-                    <span className="text-[10px] font-semibold truncate">{preset.name}</span>
-                  </button>
-                ))}
+            {/* Custom Logo Sync Info */}
+            <div className="rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/80 p-3 text-[11px] text-emerald-900 dark:text-emerald-300 flex items-start gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-bold">
+                  {lang === 'bn' ? 'স্বয়ংক্রিয় ক্লাউড ও লোকাল সিঙ্ক:' : 'Automatic Cloud & Local Sync:'}
+                </strong>
+                <span>
+                  {lang === 'bn'
+                    ? 'আপনার আপলোডকৃত কাস্টম লোগোটি সাথে সাথে লোকাল স্টোরেজ ও সুপাবেজ ডাটাবেজে সেভ হয় এবং টপবার ও A4 ইনভয়েসে রিয়েল-টাইমে প্রদর্শিত হয়।'
+                    : 'Your uploaded custom logo is immediately saved to local storage & Supabase and rendered on the top header and A4 invoices.'}
+                </span>
               </div>
             </div>
           </div>
@@ -490,21 +487,122 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </form>
       )}
 
+      {/* Supabase Cloud Database Integration Section */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4 text-xs transition-colors">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Cloud className="h-4 w-4" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>{lang === 'bn' ? 'Supabase ক্লাউড ডেটাবেজ ইন্টিগ্রেশন' : 'Supabase Cloud Database Integration'}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  isSupabaseConfigured()
+                    ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                }`}>
+                  {isSupabaseConfigured() ? (lang === 'bn' ? 'সংযুক্ত / কনফিগার করা' : 'Connected') : (lang === 'bn' ? 'লোকাল স্টোরেজ মোড' : 'Local Storage Mode')}
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                {lang === 'bn'
+                  ? 'আপনার প্রজেক্টের Supabase URL এবং Anon Key দিয়ে ক্লাউড ব্যাকআপ ও মাল্টি-ডিভাইস সিঙ্ক চালু করুন।'
+                  : 'Connect your Supabase project for real-time cloud persistence and multi-terminal sync.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {supabaseNotice && (
+          <div className={`flex items-center gap-2 rounded-xl p-3 text-xs font-medium animate-in fade-in ${
+            supabaseNotice.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+              : 'bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+          }`}>
+            {supabaseNotice.type === 'success' ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+            <span>{supabaseNotice.text}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSaveSupabase} className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Supabase Project URL
+              </label>
+              <input
+                type="text"
+                value={supabaseCfg.url}
+                onChange={(e) => setSupabaseCfg({ ...supabaseCfg, url: e.target.value })}
+                placeholder="https://your-project.supabase.co"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 font-mono text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Supabase Anon / Public API Key
+              </label>
+              <input
+                type="password"
+                value={supabaseCfg.anonKey}
+                onChange={(e) => setSupabaseCfg({ ...supabaseCfg, anonKey: e.target.value })}
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 font-mono text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTestSupabase}
+                disabled={supabaseTesting || !supabaseCfg.url}
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                <Wifi className="h-3.5 w-3.5" />
+                <span>{supabaseTesting ? (lang === 'bn' ? 'সংযোগ পরীক্ষা হচ্ছে...' : 'Testing...') : (lang === 'bn' ? 'সংযোগ পরীক্ষা করুন' : 'Test Connection')}</span>
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 shadow-xs transition-colors cursor-pointer"
+            >
+              <Save className="h-3.5 w-3.5" />
+              <span>{lang === 'bn' ? 'Supabase সেভ করুন' : 'Save Supabase Config'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
       {/* Database Maintenance & Temp Data Clean Section */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <Trash2 className="h-4 w-4 text-rose-500" />
           <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-            {lang === 'bn' ? 'অস্থায়ী ডেটা ও সিস্টেম ক্যাশ ব্যবস্থাপনা' : 'Temporary Data & System Cache Maintenance'}
+            {lang === 'bn' ? 'ডেটাবেজ ও ডেমো ডাটা ব্যবস্থাপনা' : 'Database & Demo Data Maintenance'}
           </h4>
         </div>
         <p className="text-xs text-slate-500">
           {lang === 'bn' 
-            ? 'পরীক্ষামূলক বা ডেমো বিক্রয় ডেটা মুছে ফেলুন অথবা সম্পূর্ণ ডাটাবেজ প্রাথমিক অবস্থায় ফিরিয়ে আনুন।' 
-            : 'Clear temporary test sales receipts or restore initial business defaults.'}
+            ? 'সিস্টেম থেকে সব ডেমো ডাটা মুছে ফেলুন অথবা সম্পূর্ণ ডাটাবেজ প্রাথমিক অবস্থায় ফিরিয়ে আনুন।' 
+            : 'Clear all mock/demo records or reset local database.'}
         </p>
 
         <div className="flex flex-wrap gap-3 pt-1">
+          {onClearAllMockData && (
+            <button
+              type="button"
+              onClick={onClearAllMockData}
+              className="flex items-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-950/40 px-4 py-2 text-xs font-bold text-rose-800 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors cursor-pointer"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>{lang === 'bn' ? 'সব ডেমো ডাটা সম্পূর্ণ মুছুন' : 'Wipe All Mock/Demo Data'}</span>
+            </button>
+          )}
+
           {onClearTempData && (
             <button
               type="button"
@@ -520,10 +618,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <button
               type="button"
               onClick={onResetDatabase}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-4 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span>{lang === 'bn' ? 'ফ্যাক্টরি রিসেট (ডিফল্ট ডেটা)' : 'Reset Database to Defaults'}</span>
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>{lang === 'bn' ? 'ফ্যাক্টরি রিসেট (রিসেট ডাটাবেজ)' : 'Factory Reset Database'}</span>
             </button>
           )}
         </div>

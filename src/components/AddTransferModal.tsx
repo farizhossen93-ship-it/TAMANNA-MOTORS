@@ -13,8 +13,8 @@ export const AddTransferModal: React.FC<AddTransferModalProps> = ({
   onClose,
   onAddTransfer
 }) => {
-  const [fromLocation, setFromLocation] = useState('Main Branch');
-  const [toLocation, setToLocation] = useState('Westside Hub');
+  const [fromLocation, setFromLocation] = useState('Hazigonj Branch');
+  const [toLocation, setToLocation] = useState('Hazigonj Central Depot');
   const [status, setStatus] = useState<'Completed' | 'Pending' | 'In Transit'>('In Transit');
   const [shippingCharges, setShippingCharges] = useState('35.00');
   const [totalAmount, setTotalAmount] = useState('1850.00');
@@ -76,9 +76,7 @@ export const AddTransferModal: React.FC<AddTransferModalProps> = ({
                 onChange={(e) => setFromLocation(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 p-2 focus:border-slate-500 focus:outline-none"
               >
-                <option value="Main Branch">Main Branch</option>
-                <option value="Downtown Store">Downtown Store</option>
-                <option value="Westside Hub">Westside Hub</option>
+                <option value="Hazigonj Branch">Hazigonj Branch (প্রধান শোরুম)</option>
               </select>
             </div>
             <div>
@@ -90,9 +88,7 @@ export const AddTransferModal: React.FC<AddTransferModalProps> = ({
                 onChange={(e) => setToLocation(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 p-2 focus:border-slate-500 focus:outline-none"
               >
-                <option value="Westside Hub">Westside Hub</option>
-                <option value="Downtown Store">Downtown Store</option>
-                <option value="Main Branch">Main Branch</option>
+                <option value="Hazigonj Central Depot">Hazigonj Central Depot (গোডাউন)</option>
               </select>
             </div>
           </div>

@@ -12,7 +12,9 @@ import {
   Edit2,
   Trash2,
   Eye,
-  Plus
+  Plus,
+  Lock,
+  Shield
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 import { printHtmlContent, downloadPrintDocument, fallbackDirectPrint } from '../utils/printHelper';
@@ -39,6 +41,7 @@ interface DataTableProps<T> {
   searchFilterKeys?: (keyof T)[];
   tableId?: string;
   lang?: Language;
+  isSuperAdmin?: boolean;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -54,7 +57,8 @@ export function DataTable<T extends Record<string, any>>({
   onView,
   searchFilterKeys,
   tableId = "printable-table",
-  lang = 'en'
+  lang = 'en',
+  isSuperAdmin = true
 }: DataTableProps<T>) {
   const t = TRANSLATIONS[lang];
   const [searchTerm, setSearchTerm] = useState('');
@@ -225,7 +229,15 @@ export function DataTable<T extends Record<string, any>>({
       {/* Header with Title and Optional "Add New" Button */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">{title}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">{title}</h2>
+            {!isSuperAdmin && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300">
+                <Shield className="h-3 w-3 text-amber-600" />
+                {lang === 'bn' ? 'স্টাফ এন্ট্রি মোড (শুধুমাত্র এন্ট্রি)' : 'Staff Entry Mode (Entry Only)'}
+              </span>
+            )}
+          </div>
           {subtitle && <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{subtitle}</p>}
         </div>
 
@@ -434,20 +446,32 @@ export function DataTable<T extends Record<string, any>>({
                       {(onEdit || onDelete || onView) && (
                         <td className="py-2.5 px-3 text-center whitespace-nowrap action-column">
                           <div className="flex items-center justify-center gap-1.5">
-                            {/* Direct Edit Button */}
+                            {/* Edit Button: enabled for Super Admin, locked for Staff */}
                             {onEdit && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEdit(row);
-                                }}
-                                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700/80 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-[11px] font-bold transition-colors shadow-2xs"
-                                title="Edit this record"
-                              >
-                                <Edit2 className="h-3 w-3" />
-                                <span>{t.edit}</span>
-                              </button>
+                              isSuperAdmin ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEdit(row);
+                                  }}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700/80 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-[11px] font-bold transition-colors shadow-2xs"
+                                  title="Edit this record (Super Admin)"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                  <span>{t.edit}</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 text-[11px] font-medium cursor-not-allowed opacity-60"
+                                  title={lang === 'bn' ? 'শুধুমাত্র সুপার অ্যাডমিন এডিট করতে পারবেন' : 'Super Admin Only: Staff can only enter new data'}
+                                >
+                                  <Lock className="h-3 w-3" />
+                                  <span>{t.edit}</span>
+                                </button>
+                              )
                             )}
 
                             {/* Direct View / Print Receipt Button */}
@@ -466,7 +490,7 @@ export function DataTable<T extends Record<string, any>>({
                               </button>
                             )}
 
-                            {/* Direct Delete Button */}
+                            {/* Delete Button: Direct delete for Super Admin, Deletion Request for Staff */}
                             {onDelete && (
                               <button
                                 type="button"
@@ -474,10 +498,23 @@ export function DataTable<T extends Record<string, any>>({
                                   e.stopPropagation();
                                   onDelete(row);
                                 }}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors"
-                                title="Delete record"
+                                className={`flex items-center justify-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-bold transition-colors ${
+                                  isSuperAdmin
+                                    ? 'border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50'
+                                    : 'border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                                }`}
+                                title={
+                                  isSuperAdmin
+                                    ? (lang === 'bn' ? 'সরাসরি মুছুন (সুপার অ্যাডমিন)' : 'Delete record (Super Admin)')
+                                    : (lang === 'bn' ? 'মুছে ফেলার আবেদন পাঠান (সুপার অ্যাডমিন অনুমোদন প্রয়োজন)' : 'Submit Deletion / Damage Request to Super Admin')
+                                }
                               >
                                 <Trash2 className="h-3 w-3" />
+                                {!isSuperAdmin && (
+                                  <span className="text-[10px] hidden sm:inline">
+                                    {lang === 'bn' ? 'আবেদন' : 'Request'}
+                                  </span>
+                                )}
                               </button>
                             )}
                           </div>

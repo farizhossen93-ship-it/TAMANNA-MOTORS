@@ -47,6 +47,7 @@ import { EditEntryModal } from './components/EditEntryModal';
 import { SettingsView } from './components/SettingsView';
 import { ReportsView } from './components/ReportsView';
 import { UserManagementView } from './components/UserManagementView';
+import { SyncedDuesView } from './components/SyncedDuesView';
 import { ReceiptModal } from './components/ReceiptModal';
 import { LoginView } from './components/LoginView';
 import { InvoiceScanModal } from './components/InvoiceScanModal';
@@ -61,7 +62,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [isPosOpen, setIsPosOpen] = useState<boolean>(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
-  const [currentBranch, setCurrentBranch] = useState<string>('Dhaka Central Showroom');
+  const [currentBranch, setCurrentBranch] = useState<string>('Hazigonj Branch');
   const [userRole, setUserRole] = useState<UserRole>(() => DatabaseStorage.loadActiveRole());
 
   // Theme & Language
@@ -162,6 +163,7 @@ export default function App() {
     data: any;
   } | null>(null);
   const [viewingReceiptSale, setViewingReceiptSale] = useState<Sale | null>(null);
+  const [isReceiptMoneyMode, setIsReceiptMoneyMode] = useState<boolean>(false);
 
   // Global Keyboard Shortcuts (Ctrl+P: POS, Ctrl+S: Search, Ctrl+I: Invoice, Ctrl+/: Help, Alt+C: Calc, Esc: Close)
   useEffect(() => {
@@ -516,7 +518,22 @@ export default function App() {
       return p;
     }));
     setPriceUpdates({});
-    alert(lang === 'bn' ? 'সকল পণ্যের বিক্রয় মূল্য সফলভাবে হালনাগাদ হয়েছে।' : 'Product selling prices updated successfully.');
+    showSyncNotice(lang === 'bn' ? 'সকল পণ্যের বিক্রয় মূল্য সফলভাবে হালনাগাদ হয়েছে।' : 'Product selling prices updated successfully.');
+  };
+
+  const handleClearAllMockData = () => {
+    setSales([]);
+    setPurchases([]);
+    setExpenses([]);
+    setSalesReturns([]);
+    setPurchaseReturns([]);
+    setStockTransfers([]);
+    setSuppliers([]);
+    DatabaseStorage.saveSales([]);
+    DatabaseStorage.savePurchases([]);
+    DatabaseStorage.saveExpenses([]);
+    DatabaseStorage.saveSuppliers([]);
+    showSyncNotice(lang === 'bn' ? 'সকল ডেমো ডাটা সফলভাবে মুছে ফেলা হয়েছে।' : 'All mock/demo data cleared successfully.');
   };
 
   const handleRefreshDatabase = () => {
@@ -749,20 +766,43 @@ export default function App() {
     {
       header: lang === 'bn' ? 'অবস্থা' : 'Status',
       accessorKey: 'paymentStatus',
-      cell: (row) => (
-        <span className={`font-bold text-[11px] ${
-          row.paymentStatus === 'Paid' ? 'text-emerald-800 dark:text-emerald-400' : 'text-amber-800 dark:text-amber-400'
-        }`}>
-          {row.paymentStatus}
-        </span>
-      )
+      cell: (row) => {
+        const isPaid = row.paymentStatus === 'Paid' || (row.invoiceDue !== undefined && row.invoiceDue <= 0);
+        const isPartial = !isPaid && (row.amountTendered || 0) > 0;
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black ${
+            isPaid 
+              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+              : isPartial 
+              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' 
+              : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+          }`}>
+            {isPaid ? (lang === 'bn' ? 'পরিশোধিত' : 'Paid') : isPartial ? (lang === 'bn' ? 'আংশিক বাকি' : 'Partial') : (lang === 'bn' ? 'বাকি' : 'Due')}
+          </span>
+        );
+      }
     },
     {
       header: lang === 'bn' ? 'তারিখ' : 'Sale Date',
       accessorKey: 'saleDate',
       cell: (row) => <span className="font-mono text-slate-600 dark:text-slate-300">{row.saleDate}</span>
     },
-    { header: lang === 'bn' ? 'সর্বমোট টাকা' : 'Total Amount', accessorKey: 'totalAmount', align: 'right' }
+    { header: lang === 'bn' ? 'সর্বমোট টাকা' : 'Total Amount', accessorKey: 'totalAmount', align: 'right' },
+    {
+      header: lang === 'bn' ? 'বকেয়া (৳)' : 'Due (৳)',
+      accessorKey: 'invoiceDue',
+      align: 'right',
+      cell: (row) => {
+        const due = row.invoiceDue !== undefined ? row.invoiceDue : Math.max(0, row.totalAmount - (row.amountTendered || 0));
+        return due > 0 ? (
+          <span className="font-black text-rose-600 dark:text-rose-400 font-mono">
+            ৳{due.toLocaleString('en-US')}
+          </span>
+        ) : (
+          <span className="text-slate-400 font-mono">৳0</span>
+        );
+      }
+    }
   ];
 
   // Render the selected route
@@ -1071,6 +1111,25 @@ export default function App() {
           />
         );
 
+      case 'synced-dues':
+        return (
+          <SyncedDuesView
+            sales={sales}
+            onUpdateSale={(updatedSale) => {
+              setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+              DatabaseStorage.saveSales(sales.map(s => s.id === updatedSale.id ? updatedSale : s));
+            }}
+            onOpenReceipt={(sale, isMoney) => {
+              setViewingReceiptSale(sale);
+              setIsReceiptMoneyMode(!!isMoney);
+            }}
+            currentUser={currentUser}
+            businessSettings={businessSettings}
+            invoiceSettings={invoiceSettings}
+            lang={lang}
+          />
+        );
+
       case 'sales-all':
         return (
           <DataTable
@@ -1121,7 +1180,7 @@ export default function App() {
                   invoiceNo: draftNo,
                   type: 'draft',
                   customerName: 'Md. Hasan Mahmud',
-                  businessLocation: 'Dhaka Central Showroom',
+                  businessLocation: currentBranch || 'Hazigonj Branch',
                   paymentStatus: 'Due',
                   paymentMethod: 'Credit',
                   totalAmount: 12500,
@@ -1232,6 +1291,7 @@ export default function App() {
             onSaveInvoice={setInvoiceSettings}
             lang={lang}
             onClearTempData={handleClearTempSales}
+            onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
           />
         );
@@ -1246,6 +1306,7 @@ export default function App() {
             onSaveInvoice={setInvoiceSettings}
             lang={lang}
             onClearTempData={handleClearTempSales}
+            onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
           />
         );
@@ -1381,6 +1442,7 @@ export default function App() {
           onClose={() => setViewingReceiptSale(null)}
           invoiceNo={viewingReceiptSale.invoiceNo}
           customerName={viewingReceiptSale.customerName}
+          customerPhone={viewingReceiptSale.customerPhone}
           items={viewingReceiptSale.items && viewingReceiptSale.items.length > 0 ? viewingReceiptSale.items : [
             {
               product: products[0] || INITIAL_TAMANNA_PRODUCTS[0],
@@ -1397,13 +1459,21 @@ export default function App() {
           grandTotal={viewingReceiptSale.totalAmount}
           amountTendered={viewingReceiptSale.amountTendered ?? viewingReceiptSale.totalAmount}
           changeDue={viewingReceiptSale.changeDue ?? 0}
+          invoiceDue={viewingReceiptSale.invoiceDue}
+          duePayments={viewingReceiptSale.duePayments}
+          isMoneyReceipt={isReceiptMoneyMode}
           paymentMethod={viewingReceiptSale.paymentMethod}
           dateStr={viewingReceiptSale.saleDate}
           businessSettings={businessSettings}
           invoiceSettings={invoiceSettings}
           branchLocation={viewingReceiptSale.businessLocation}
-          cashierName={viewingReceiptSale.cashierName || "Md. Fariz (Reg-01)"}
+          cashierName={viewingReceiptSale.cashierName || currentUser?.name || (lang === 'bn' ? 'অনুমোদিত ক্যাশিয়ার' : 'Authorized Cashier')}
           lang={lang}
+          onUpdateLogo={(newLogo) => {
+            setBusinessSettings(prev => ({ ...prev, logoUrl: newLogo }));
+            setInvoiceSettings(prev => ({ ...prev, logoUrl: newLogo }));
+            showSyncNotice(lang === 'bn' ? 'কাস্টম ব্র্যান্ড লোগো হালনাগাদ ও সিঙ্ক হয়েছে।' : 'Custom brand logo updated.');
+          }}
         />
       )}
 

@@ -47,8 +47,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('cashier');
-  const [location, setLocation] = useState('Dhaka Central Showroom');
-  const [status, setStatus] = useState<'Active' | 'Suspended'>('Active');
+  const [location, setLocation] = useState('Hazigonj Branch');
+  const [status, setStatus] = useState<'Active' | 'Suspended' | 'Pending Approval'>('Active');
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -63,7 +63,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setPassword('password123');
     setPhone('');
     setRole('cashier');
-    setLocation('Dhaka Central Showroom');
+    setLocation('Hazigonj Branch');
     setStatus('Active');
     setIsModalOpen(true);
   };
@@ -150,15 +150,23 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   };
 
   const handleToggleStatus = (targetUser: AuthUser) => {
-    const updatedStatus = targetUser.status === 'Active' ? 'Suspended' : 'Active';
+    let updatedStatus: 'Active' | 'Suspended' | 'Pending Approval' = 'Active';
+    if (targetUser.status === 'Active') {
+      updatedStatus = 'Suspended';
+    } else if (targetUser.status === 'Pending Approval') {
+      updatedStatus = 'Active';
+    } else {
+      updatedStatus = 'Active';
+    }
+
     const updatedList = users.map(u => 
-      u.id === targetUser.id ? { ...u, status: updatedStatus as 'Active' | 'Suspended' } : u
+      u.id === targetUser.id ? { ...u, status: updatedStatus } : u
     );
     onUpdateUsers(updatedList);
     showNotification(
       lang === 'bn'
-        ? `${targetUser.name} এখন ${updatedStatus === 'Active' ? 'সক্রিয়' : 'স্থগিত'}`
-        : `${targetUser.name} is now ${updatedStatus}`
+        ? `${targetUser.name} এর অ্যাকাউন্ট ${updatedStatus === 'Active' ? 'অনুমোদিত ও সক্রিয়' : 'স্থগিত'} করা হয়েছে`
+        : `${targetUser.name}'s account is now ${updatedStatus}`
     );
   };
 
@@ -260,9 +268,22 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       )
     },
     {
-      header: lang === 'bn' ? 'অবস্থা' : 'Status',
+      header: lang === 'bn' ? 'অবস্থা ও অনুমোদন' : 'Status & Authorization',
       accessorKey: 'status',
       cell: (row) => {
+        if (row.status === 'Pending Approval') {
+          return (
+            <button
+              onClick={() => handleToggleStatus(row)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 transition-all shadow-xs cursor-pointer"
+              title={lang === 'bn' ? 'ক্লিক করে অনুমোদন দিন' : 'Click to authorize staff member'}
+            >
+              <UserCheck className="h-3 w-3" />
+              <span>{lang === 'bn' ? 'অনুমোদন দিন' : 'Authorize'}</span>
+            </button>
+          );
+        }
+
         const isActive = row.status === 'Active';
         return (
           <button
@@ -432,9 +453,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     onChange={(e) => setLocation(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden"
                   >
-                    <option value="Dhaka Central Showroom">Dhaka Central Showroom</option>
-                    <option value="Mirpur Branch">Mirpur Branch</option>
-                    <option value="Chittagong Hub">Chittagong Hub</option>
+                    <option value="Hazigonj Branch">Hazigonj Branch (হাজীগঞ্জ প্রধান শাখা)</option>
                   </select>
                 </div>
 

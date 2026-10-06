@@ -16,9 +16,11 @@ import {
   Package,
   Wrench,
   Printer,
-  FileText
+  FileText,
+  Smartphone,
+  AlertCircle
 } from 'lucide-react';
-import { Product, Contact, CartItem, Sale, BusinessSettings, InvoiceSettings } from '../types';
+import { Product, Contact, CartItem, Sale, BusinessSettings, InvoiceSettings, AuthUser } from '../types';
 import { ReceiptModal } from './ReceiptModal';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 
@@ -32,6 +34,8 @@ interface PosTerminalProps {
   businessSettings?: BusinessSettings;
   invoiceSettings?: InvoiceSettings;
   branchLocation?: string;
+  cashierName?: string;
+  currentUser?: AuthUser | null;
 }
 
 export const PosTerminal: React.FC<PosTerminalProps> = ({
@@ -43,7 +47,9 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   lang = 'en',
   businessSettings,
   invoiceSettings,
-  branchLocation = "Dhaka Central Showroom"
+  branchLocation = "Hazigonj Branch",
+  cashierName,
+  currentUser
 }) => {
   const t = TRANSLATIONS[lang];
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -51,7 +57,9 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Bank Transfer'>('Cash');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Bank Transfer' | 'Credit' | 'bKash/Nagad'>('Cash');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [dueNotes, setDueNotes] = useState('');
   const [amountTendered, setAmountTendered] = useState<string>('');
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [autoTriggerPrint, setAutoTriggerPrint] = useState(false);
@@ -152,11 +160,13 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   const taxAmount = taxableAmount * taxRate;
   const grandTotal = taxableAmount + taxAmount;
 
-  const currentTendered = parseFloat(amountTendered) || grandTotal;
+  const currentTendered = amountTendered !== '' ? (parseFloat(amountTendered) || 0) : (paymentMethod === 'Credit' ? 0 : grandTotal);
   const changeDue = Math.max(0, currentTendered - grandTotal);
+  const currentDueAmount = Math.max(0, grandTotal - currentTendered);
 
   const currentCustomer = customers.find(c => c.id === selectedCustomerId) || {
-    name: lang === 'bn' ? 'খুচরা ক্রেতা' : 'Walk-in Customer'
+    name: lang === 'bn' ? 'খুচরা ক্রেতা' : 'Walk-in Customer',
+    phone: ''
   };
 
   const handleCheckout = (autoPrint: boolean = false) => {
@@ -168,27 +178,41 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
     const prefix = invoiceSettings?.invoicePrefix || "TM-2026-";
     const invoiceNo = `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
     const now = new Date();
-    const dateStr = now.toLocaleString();
+    const dateStr = now.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const tenderedPaid = amountTendered !== '' ? parseFloat(amountTendered) : (paymentMethod === 'Credit' ? 0 : grandTotal);
+    const actualPaid = isNaN(tenderedPaid) ? (paymentMethod === 'Credit' ? 0 : grandTotal) : Math.max(0, tenderedPaid);
+    const calculatedDue = Math.max(0, grandTotal - actualPaid);
+    const finalChange = Math.max(0, actualPaid - grandTotal);
+    const paymentStatus: 'Paid' | 'Partial' | 'Due' = calculatedDue <= 0 ? 'Paid' : actualPaid > 0 ? 'Partial' : 'Due';
 
     const newSaleRecord: Sale = {
       id: `sale-${Date.now()}`,
       invoiceNo,
       type: 'pos',
       customerName: currentCustomer.name,
+      customerPhone: customerPhone.trim() || currentCustomer.phone || '',
       businessLocation: branchLocation,
-      paymentStatus: 'Paid',
+      paymentStatus,
       paymentMethod,
       totalAmount: grandTotal,
-      invoiceDue: 0,
+      invoiceDue: calculatedDue,
       saleDate: dateStr,
       itemsCount: cart.reduce((sum, i) => sum + i.quantity, 0),
       items: [...cart],
       subtotal,
       taxAmount,
       discountAmount,
-      amountTendered: currentTendered,
-      changeDue,
-      cashierName: 'Md. Fariz (Reg-01)'
+      amountTendered: actualPaid,
+      changeDue: finalChange,
+      dueNotes: dueNotes.trim() || undefined,
+      cashierName: cashierName || currentUser?.name || (lang === 'bn' ? 'ক্যাশিয়ার' : 'Cashier')
     };
 
     const updatedProducts = products.map(prod => {
@@ -325,7 +349,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
             <span className="hidden sm:inline">{t.calculator}</span>
           </button>
           <div className="text-xs text-slate-600 dark:text-slate-300 font-mono hidden md:block">
-            {lang === 'bn' ? 'ক্যাশিয়ার' : 'Cashier'}: <strong>Md. Fariz</strong>
+            {lang === 'bn' ? 'ক্যাশিয়ার' : 'Cashier'}: <strong>{cashierName || currentUser?.name || (lang === 'bn' ? 'অপারেটর' : 'Cashier')}</strong>
           </div>
         </div>
       </header>
@@ -464,17 +488,27 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                 </button>
               </div>
             </div>
-            <select
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none"
-            >
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.customerGroup ? `(${c.customerGroup})` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-1.5">
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none"
+              >
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.customerGroup ? `(${c.customerGroup})` : ''}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="text"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder={lang === 'bn' ? 'গ্রাহকের মোবাইল নম্বর (বকেয়ার জন্য জরুরি)' : 'Customer phone (required for dues)'}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-800 dark:text-white focus:outline-none"
+              />
+            </div>
           </div>
 
           {/* Cart Items List */}
@@ -581,90 +615,127 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
             </div>
 
             {/* Payment Method selector */}
-            <div className="grid grid-cols-3 gap-1.5 pt-1">
+            <div className="grid grid-cols-5 gap-1 pt-1">
               <button
                 type="button"
-                onClick={() => setPaymentMethod('Cash')}
-                className={`flex items-center justify-center gap-1 rounded-xl py-2 text-xs font-bold transition-all ${
+                onClick={() => { setPaymentMethod('Cash'); setAmountTendered(grandTotal.toFixed(0)); }}
+                className={`flex flex-col items-center justify-center p-1.5 rounded-xl text-[10px] font-bold transition-all ${
                   paymentMethod === 'Cash'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <Banknote className="h-3.5 w-3.5" />
+                <Banknote className="h-3.5 w-3.5 mb-0.5" />
                 <span>{t.pos.cash}</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setPaymentMethod('Card')}
-                className={`flex items-center justify-center gap-1 rounded-xl py-2 text-xs font-bold transition-all ${
+                onClick={() => { setPaymentMethod('bKash/Nagad'); setAmountTendered(grandTotal.toFixed(0)); }}
+                className={`flex flex-col items-center justify-center p-1.5 rounded-xl text-[10px] font-bold transition-all ${
+                  paymentMethod === 'bKash/Nagad'
+                    ? 'bg-pink-600 text-white shadow-xs'
+                    : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Smartphone className="h-3.5 w-3.5 mb-0.5" />
+                <span>বিকাশ/নগদ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setPaymentMethod('Credit'); setAmountTendered('0'); }}
+                className={`flex flex-col items-center justify-center p-1.5 rounded-xl text-[10px] font-bold transition-all ${
+                  paymentMethod === 'Credit'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-slate-100'
+                }`}
+              >
+                <AlertCircle className="h-3.5 w-3.5 mb-0.5" />
+                <span>বাকি (Due)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setPaymentMethod('Card'); setAmountTendered(grandTotal.toFixed(0)); }}
+                className={`flex flex-col items-center justify-center p-1.5 rounded-xl text-[10px] font-bold transition-all ${
                   paymentMethod === 'Card'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <CreditCard className="h-3.5 w-3.5" />
+                <CreditCard className="h-3.5 w-3.5 mb-0.5" />
                 <span>{t.pos.card}</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setPaymentMethod('Bank Transfer')}
-                className={`flex items-center justify-center gap-1 rounded-xl py-2 text-xs font-bold transition-all ${
+                onClick={() => { setPaymentMethod('Bank Transfer'); setAmountTendered(grandTotal.toFixed(0)); }}
+                className={`flex flex-col items-center justify-center p-1.5 rounded-xl text-[10px] font-bold transition-all ${
                   paymentMethod === 'Bank Transfer'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                 }`}
               >
-                <Building className="h-3.5 w-3.5" />
-                <span>{t.pos.bankTransfer}</span>
+                <Building className="h-3.5 w-3.5 mb-0.5" />
+                <span>ব্যাংক</span>
               </button>
             </div>
 
             {/* Tender input */}
-            {paymentMethod === 'Cash' && (
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-600 dark:text-slate-300">{t.pos.tendered}:</span>
-                  <div className="flex gap-1">
-                    {[500, 1000, 2000].map(val => (
-                      <button
-                        key={val}
-                        type="button"
-                        onClick={() => setAmountTendered(String(val))}
-                        className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-                      >
-                        ৳{val}
-                      </button>
-                    ))}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-600 dark:text-slate-300 font-bold">{lang === 'bn' ? 'নগদ জমা (Paid/Tendered):' : 'Amount Paid/Tendered:'}</span>
+                <div className="flex gap-1">
+                  {[0, 500, 1000, 2000].map(val => (
                     <button
+                      key={val}
                       type="button"
-                      onClick={() => setAmountTendered(grandTotal.toFixed(0))}
-                      className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-400 hover:bg-slate-100"
+                      onClick={() => setAmountTendered(String(val))}
+                      className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100"
                     >
-                      Exact
+                      ৳{val}
                     </button>
-                  </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setAmountTendered(grandTotal.toFixed(0))}
+                    className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-400 hover:bg-slate-100"
+                  >
+                    Exact
+                  </button>
                 </div>
-
-                <input
-                  type="number"
-                  step="1"
-                  value={amountTendered}
-                  onChange={(e) => setAmountTendered(e.target.value)}
-                  placeholder={`৳${grandTotal.toFixed(0)}`}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
-                />
-
-                {changeDue > 0 && (
-                  <div className="flex justify-between text-xs font-bold text-emerald-800 dark:text-emerald-400">
-                    <span>{t.pos.changeDue}:</span>
-                    <span className="font-mono tabular-nums">৳{changeDue.toFixed(0)}</span>
-                  </div>
-                )}
               </div>
-            )}
+
+              <input
+                type="number"
+                step="1"
+                value={amountTendered}
+                onChange={(e) => setAmountTendered(e.target.value)}
+                placeholder={`৳${grandTotal.toFixed(0)}`}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 font-mono text-xs font-bold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+              />
+
+              {/* Due Notice Banner */}
+              {currentDueAmount > 0 && (
+                <div className="flex items-center justify-between p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-black animate-in fade-in">
+                  <span className="flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    <span>{lang === 'bn' ? 'বকেয়া থাকবে (Due Sale):' : 'Remaining Due:'}</span>
+                  </span>
+                  <span className="font-mono text-sm tabular-nums text-rose-600 dark:text-rose-400">
+                    ৳{currentDueAmount.toFixed(0)}
+                  </span>
+                </div>
+              )}
+
+              {changeDue > 0 && (
+                <div className="flex justify-between text-xs font-bold text-emerald-800 dark:text-emerald-400">
+                  <span>{t.pos.changeDue}:</span>
+                  <span className="font-mono tabular-nums">৳{changeDue.toFixed(0)}</span>
+                </div>
+              )}
+            </div>
 
             {/* Print and Checkout Action Buttons */}
             <div className="grid grid-cols-2 gap-2 pt-1">

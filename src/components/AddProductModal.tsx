@@ -38,7 +38,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [name, setName] = useState(initialProduct?.name || '');
   const [sku, setSku] = useState(initialProduct?.sku || '');
   const [category, setCategory] = useState(initialProduct?.category || 'Engine Oil & Lubricants');
-  const [location, setLocation] = useState(initialProduct?.businessLocation || 'Dhaka Central Showroom');
+  const [location, setLocation] = useState(initialProduct?.businessLocation || 'Hazigonj Branch');
   const [purchasePrice, setPurchasePrice] = useState(initialProduct?.unitPurchasePrice.toString() || '');
   const [sellingPrice, setSellingPrice] = useState(initialProduct?.sellingPrice.toString() || '');
   const [stock, setStock] = useState(initialProduct?.currentStock.toString() || '15');
@@ -458,9 +458,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               onChange={(e) => setLocation(e.target.value)}
               className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
             >
-              <option value="Dhaka Central Showroom">Dhaka Central Showroom (ঢাকা শোরুম)</option>
-              <option value="Mirpur Branch">Mirpur Branch & Workshop (মিরপুর শাখা)</option>
-              <option value="Chittagong Hub">Chittagong Hub (চট্টগ্রাম ডিপো)</option>
+              <option value="Hazigonj Branch">Hazigonj Branch (হাজীগঞ্জ প্রধান শাখা)</option>
             </select>
           </div>
 

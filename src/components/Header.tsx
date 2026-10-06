@@ -115,9 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [lang]);
 
   const branches = [
-    { id: "Dhaka Central Showroom", labelEn: "Dhaka Central Showroom", labelBn: "ঢাকা সেন্ট্রাল শোরুম" },
-    { id: "Mirpur Branch", labelEn: "Mirpur Branch & Workshop", labelBn: "মিরপুর শাখা ও ওয়ার্কশপ" },
-    { id: "Chittagong Hub", labelEn: "Chittagong Spare Hub", labelBn: "চট্টগ্রাম স্পেয়ার হাব" }
+    { id: "Hazigonj Branch", labelEn: "Hazigonj Branch (Main)", labelBn: "হাজীগঞ্জ ব্রাঞ্চ (প্রধান শোরুম)" }
   ];
 
   return (
@@ -148,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="hidden sm:block">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-900 dark:text-white">
-              {t.welcome}, Md. Fariz
+              {t.welcome}, {currentUser?.name || (lang === 'bn' ? 'অ্যাডমিন' : 'Admin')}
             </span>
 
             {/* Super Admin & User Role Switcher */}
@@ -540,7 +538,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="hidden text-left xl:block">
               <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[130px]">
-                {currentUser?.name || (lang === 'bn' ? 'ফারিজ হোসেন' : 'Fariz Hossen')}
+                {currentUser?.name || (lang === 'bn' ? 'অ্যাডমিন ইউজার' : 'Admin User')}
               </div>
               <div className="text-[10px] text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium capitalize">
                 {(currentUser?.role || userRole) === 'super_admin' ? (
@@ -565,7 +563,7 @@ export const Header: React.FC<HeaderProps> = ({
                       {currentUser?.name || 'TAMANNA MOTORS'}
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                      {currentUser?.email || 'farizhossen93@gmail.com'}
+                      {currentUser?.email || (currentUser?.username ? `${currentUser.username}@tamannamotors.com` : 'admin@tamannamotors.com')}
                     </p>
                   </div>
                 </div>

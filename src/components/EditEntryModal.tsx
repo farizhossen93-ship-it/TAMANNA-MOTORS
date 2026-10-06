@@ -325,9 +325,7 @@ export const EditEntryModal: React.FC<EditEntryModalProps> = ({
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
               >
-                <option value="Dhaka Central Showroom">Dhaka Central Showroom</option>
-                <option value="Mirpur Branch">Mirpur Branch</option>
-                <option value="Chittagong Hub">Chittagong Hub</option>
+                <option value="Hazigonj Branch">Hazigonj Branch (হাজীগঞ্জ প্রধান শাখা)</option>
               </select>
             </div>
           </div>

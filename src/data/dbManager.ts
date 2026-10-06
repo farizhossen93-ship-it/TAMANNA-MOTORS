@@ -1,4 +1,4 @@
-import { Product, Contact, CustomerGroup, Purchase, PurchaseReturn, Sale, SalesReturn, StockTransfer, Expense, BusinessSettings, InvoiceSettings, UserRole, AuthUser } from '../types';
+import { Product, Contact, CustomerGroup, Purchase, PurchaseReturn, Sale, SalesReturn, StockTransfer, Expense, BusinessSettings, InvoiceSettings, UserRole, AuthUser, DeleteRequest, AuditLog } from '../types';
 
 export const DEFAULT_STAFF_USERS: AuthUser[] = [];
 
@@ -9,20 +9,20 @@ export const TAMANNA_BUSINESS_SETTINGS: BusinessSettings = {
   currencySymbol: "৳",
   financialYearStart: "July",
   defaultTaxRate: 5.0,
-  primaryLocation: "Dhaka Central Showroom",
-  contactEmail: "info@tamannamotors.com",
-  contactPhone: "+880 1711-234567",
-  address: "House 42, Road 11, Block D, Mirpur-10, Dhaka-1216, Bangladesh",
-  logoUrl: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=150&h=150&q=80"
+  primaryLocation: "Hazigonj, Chandpur",
+  contactEmail: "tamannamotors.bd@gmail.com",
+  contactPhone: "01626666906, 01878934956",
+  address: "HAZIGONJ-KACHUA MAIN ROAD, WEST BAZAR, HAZIGONJ, CHANDPUR.",
+  logoUrl: ""
 };
 
 export const TAMANNA_INVOICE_SETTINGS: InvoiceSettings = {
   invoicePrefix: "TM-2026-",
-  termsAndConditions: "১. বিক্রিত মাল ১৪ দিনের মধ্যে অক্ষত অবস্থায় ক্যাশ মেমোসহ পরিবর্তনযোগ্য। ২. ইলেকট্রিক্যাল ও ব্যাটারি আইটেমে প্রস্তুতকারকের ওয়ারেন্টি প্রযোজ্য।",
+  termsAndConditions: "১. বিক্রিত মাল ১৪ দিনের মধ্যে অক্ষত অবস্থায় ক্যাশ মেমোসহ পরিবর্তনযোগ্য। ২. ইলেকট্রিক্যাল ও ব্যাটারি আইটেমে প্রস্তুতকারকের শর্ত প্রযোজ্য।",
   showLogo: true,
-  paperSize: "80mm",
+  paperSize: "A4",
   footerNotes: "তামান্না মোটরসে কেনাকাটার জন্য আন্তরিক ধন্যবাদ! ১০০% জেনুইন পার্টসের বিশ্বস্ত প্রতিষ্ঠান।",
-  logoUrl: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=150&h=150&q=80"
+  logoUrl: ""
 };
 
 export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
@@ -31,7 +31,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "Motul 7100 4T 10W-40 100% Synthetic 1L",
     sku: "MOT-4T-10W40",
     category: "Engine Oil & Lubricants",
-    businessLocation: "Dhaka Central Showroom",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 1250,
     sellingPrice: 1550,
     currentStock: 48,
@@ -44,7 +44,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "NGK Laser Iridium Spark Plug CR9EIA-9",
     sku: "NGK-CR9EIA9",
     category: "Electrical & Ignition",
-    businessLocation: "Dhaka Central Showroom",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 680,
     sellingPrice: 950,
     currentStock: 32,
@@ -57,7 +57,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "Brembo Sintered Front Disc Brake Pads Set",
     sku: "BRM-BP-FR01",
     category: "Brakes & Suspension",
-    businessLocation: "Mirpur Branch",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 920,
     sellingPrice: 1350,
     currentStock: 18,
@@ -70,7 +70,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "Exide Xplore 12V 5Ah Maintenance-Free Battery",
     sku: "EXD-12V5AH-MF",
     category: "Batteries & Power",
-    businessLocation: "Dhaka Central Showroom",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 1850,
     sellingPrice: 2400,
     currentStock: 14,
@@ -83,7 +83,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "MRF Zapper-FS 90/90-17 Tubeless Front Tyre",
     sku: "MRF-TYR-909017",
     category: "Tyres & Tubes",
-    businessLocation: "Chittagong Hub",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 2800,
     sellingPrice: 3450,
     currentStock: 9,
@@ -96,7 +96,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "DID 428-130L Heavy Duty Drive Chain & Sprocket",
     sku: "DID-428-130L",
     category: "Transmission & Drivetrain",
-    businessLocation: "Dhaka Central Showroom",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 1650,
     sellingPrice: 2200,
     currentStock: 22,
@@ -109,7 +109,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "Bosch FC4 Disc Dual-Tone 12V Horn Set",
     sku: "BSH-HRN-12V",
     category: "Electrical & Ignition",
-    businessLocation: "Mirpur Branch",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 850,
     sellingPrice: 1250,
     currentStock: 25,
@@ -122,7 +122,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
     name: "K&N High-Flow Washable Air Filter",
     sku: "KN-FLT-YA01",
     category: "Filters & Intake",
-    businessLocation: "Chittagong Hub",
+    businessLocation: "Hazigonj Branch",
     unitPurchasePrice: 1400,
     sellingPrice: 1950,
     currentStock: 16,
@@ -132,47 +132,7 @@ export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
   }
 ];
 
-export const INITIAL_TAMANNA_SUPPLIERS: Contact[] = [
-  {
-    id: "tm-sup-1",
-    type: "supplier",
-    name: "Abdul Karim",
-    businessName: "Motul Bangladesh Distributor Ltd",
-    email: "supply@motulbd.com",
-    phone: "+880 1819-882211",
-    businessLocation: "Dhaka Central Showroom",
-    taxNumber: "TAX-BD-8839210",
-    creditLimit: 300000,
-    balance: 45000.00,
-    address: "Tejgaon Industrial Area, Dhaka"
-  },
-  {
-    id: "tm-sup-2",
-    type: "supplier",
-    name: "Rafiqul Islam",
-    businessName: "Meghna Auto Components Ltd",
-    email: "orders@meghnaauto.com",
-    phone: "+880 1712-993344",
-    businessLocation: "Mirpur Branch",
-    taxNumber: "TAX-BD-7729103",
-    creditLimit: 200000,
-    balance: 28500.00,
-    address: "Banglamotor, Dhaka"
-  },
-  {
-    id: "tm-sup-3",
-    type: "supplier",
-    name: "Tanvir Ahmed",
-    businessName: "Apex Tyres & Rubber Imports",
-    email: "info@apextyresbd.com",
-    phone: "+880 1911-554422",
-    businessLocation: "Chittagong Hub",
-    taxNumber: "TAX-BD-9910283",
-    creditLimit: 500000,
-    balance: 62000.00,
-    address: "Agrabad Commercial Area, Chittagong"
-  }
-];
+export const INITIAL_TAMANNA_SUPPLIERS: Contact[] = [];
 
 export const INITIAL_TAMANNA_CUSTOMERS: Contact[] = [
   {
@@ -180,155 +140,134 @@ export const INITIAL_TAMANNA_CUSTOMERS: Contact[] = [
     type: "customer",
     name: "Walk-in Customer (খুচরা ক্রেতা)",
     email: "retail@tamannamotors.com",
-    phone: "01700000000",
+    phone: "01711000000",
     customerGroup: "Retail",
-    businessLocation: "Dhaka Central Showroom",
+    businessLocation: "Hazigonj Branch",
     balance: 0.00,
-    totalPurchases: 185000.00
+    totalPurchases: 2400.00
   },
   {
-    id: "tm-cust-1",
+    id: "cust-1",
     type: "customer",
-    name: "Md. Hasan Mahmud",
-    businessName: "Speed Rider Workshop",
-    email: "hasan@speedrider.com",
-    phone: "+880 1722-334455",
-    customerGroup: "Wholesale Partner",
-    businessLocation: "Dhaka Central Showroom",
-    creditLimit: 80000,
-    balance: 14500.00,
-    totalPurchases: 245000.00,
-    address: "Mirpur-1, Dhaka"
+    name: "Md. Rafiqul Islam (রফিকুল ইসলাম - মেকানিক)",
+    email: "rafiq.mechanic@gmail.com",
+    phone: "01819234567",
+    customerGroup: "Wholesale",
+    businessLocation: "Hazigonj Branch",
+    balance: 2200.00,
+    totalPurchases: 28500.00
   },
   {
-    id: "tm-cust-2",
+    id: "cust-2",
     type: "customer",
-    name: "Shakil Chowdhury",
-    businessName: "Chowdhury Bike Service Center",
-    email: "shakil.bike@gmail.com",
-    phone: "+880 1817-665544",
-    customerGroup: "VIP Tier",
-    businessLocation: "Chittagong Hub",
-    creditLimit: 120000,
-    balance: 22000.00,
-    totalPurchases: 380000.00,
-    address: "GEC Circle, Chittagong"
+    name: "Haji Nurul Huda (হাজী নুরুল হুদা)",
+    email: "haji.nurul@gmail.com",
+    phone: "01722889900",
+    customerGroup: "VIP Fleet",
+    businessLocation: "Hazigonj Branch",
+    balance: 3450.00,
+    totalPurchases: 42000.00
   }
 ];
 
 export const INITIAL_TAMANNA_SALES: Sale[] = [
   {
-    id: "tm-sale-1",
-    invoiceNo: "TM-2026-9041",
+    id: "sale-101",
+    invoiceNo: "TM-2026-1001",
     type: "pos",
-    customerName: "Walk-in Customer (খুচরা ক্রেতা)",
-    businessLocation: "Dhaka Central Showroom",
+    customerName: "Md. Rafiqul Islam (মেকানিক)",
+    customerPhone: "01819234567",
+    businessLocation: "Hazigonj Branch",
+    paymentStatus: "Partial",
+    paymentMethod: "Cash",
+    totalAmount: 5200,
+    invoiceDue: 2200,
+    saleDate: new Date(Date.now() - 86400000 * 2).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+    itemsCount: 3,
+    subtotal: 4952,
+    taxAmount: 248,
+    discountAmount: 0,
+    amountTendered: 3000,
+    changeDue: 0,
+    dueNotes: "বাকি টাকা আগামী সপ্তাহে পরিশোধ করবেন",
+    duePayments: [
+      {
+        id: "dp-1",
+        paymentDate: new Date(Date.now() - 86400000).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+        amountPaid: 1000,
+        paymentMethod: "bKash/Nagad",
+        remainingDue: 2200,
+        receivedBy: "Authorized Cashier",
+        notes: "বিকাশে ১০০০ টাকা জমা দিলেন"
+      }
+    ],
+    items: [
+      {
+        product: INITIAL_TAMANNA_PRODUCTS[0],
+        quantity: 2
+      },
+      {
+        product: INITIAL_TAMANNA_PRODUCTS[1],
+        quantity: 2
+      }
+    ]
+  },
+  {
+    id: "sale-102",
+    invoiceNo: "TM-2026-1002",
+    type: "pos",
+    customerName: "Haji Nurul Huda",
+    customerPhone: "01722889900",
+    businessLocation: "Hazigonj Branch",
+    paymentStatus: "Due",
+    paymentMethod: "Credit",
+    totalAmount: 3450,
+    invoiceDue: 3450,
+    saleDate: new Date(Date.now() - 86400000 * 1).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+    itemsCount: 1,
+    subtotal: 3285,
+    taxAmount: 165,
+    discountAmount: 0,
+    amountTendered: 0,
+    changeDue: 0,
+    dueNotes: "টায়ার পরিবর্তন বাকি",
+    items: [
+      {
+        product: INITIAL_TAMANNA_PRODUCTS[4],
+        quantity: 1
+      }
+    ]
+  },
+  {
+    id: "sale-103",
+    invoiceNo: "TM-2026-1003",
+    type: "pos",
+    customerName: "Walk-in Customer",
+    customerPhone: "01711000000",
+    businessLocation: "Hazigonj Branch",
     paymentStatus: "Paid",
     paymentMethod: "Cash",
-    totalAmount: 2500.00,
-    invoiceDue: 0.00,
-    saleDate: "2026-10-04 10:20:15",
-    itemsCount: 2
-  },
-  {
-    id: "tm-sale-2",
-    invoiceNo: "TM-2026-9042",
-    type: "pos",
-    customerName: "Md. Hasan Mahmud",
-    businessLocation: "Dhaka Central Showroom",
-    paymentStatus: "Paid",
-    paymentMethod: "Bank Transfer",
-    totalAmount: 8900.00,
-    invoiceDue: 0.00,
-    saleDate: "2026-10-04 09:45:00",
-    itemsCount: 5
-  },
-  {
-    id: "tm-sale-3",
-    invoiceNo: "TM-2026-9039",
-    type: "sale",
-    customerName: "Shakil Chowdhury",
-    businessLocation: "Chittagong Hub",
-    paymentStatus: "Partial",
-    paymentMethod: "Credit",
-    totalAmount: 34500.00,
-    invoiceDue: 12000.00,
-    saleDate: "2026-10-03 16:10:00",
-    itemsCount: 18
+    totalAmount: 2400,
+    invoiceDue: 0,
+    saleDate: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+    itemsCount: 1,
+    subtotal: 2285,
+    taxAmount: 115,
+    discountAmount: 0,
+    amountTendered: 2400,
+    changeDue: 0,
+    items: [
+      {
+        product: INITIAL_TAMANNA_PRODUCTS[3],
+        quantity: 1
+      }
+    ]
   }
 ];
 
-export const INITIAL_TAMANNA_PURCHASES: Purchase[] = [
-  {
-    id: "pur-tm-1",
-    purchaseNo: "PO-2026-881",
-    supplierName: "Bangladesh Honda Motors Parts Ltd",
-    businessLocation: "Dhaka Central Showroom",
-    purchaseStatus: "Received",
-    paymentStatus: "Paid",
-    purchaseDate: "2026-09-28",
-    grandTotal: 42500.00,
-    paymentDue: 0.00,
-    itemsCount: 50
-  },
-  {
-    id: "pur-tm-2",
-    purchaseNo: "PO-2026-882",
-    supplierName: "Uttara Motors Ltd (Bajaj Genuine)",
-    businessLocation: "Mirpur Branch",
-    purchaseStatus: "Received",
-    paymentStatus: "Partial",
-    purchaseDate: "2026-09-30",
-    grandTotal: 18500.00,
-    paymentDue: 8500.00,
-    itemsCount: 120
-  },
-  {
-    id: "pur-tm-3",
-    purchaseNo: "PO-2026-883",
-    supplierName: "Yamaha Parts Depot (ACI Motors)",
-    businessLocation: "Chittagong Hub",
-    purchaseStatus: "Pending",
-    paymentStatus: "Due",
-    purchaseDate: "2026-10-02",
-    grandTotal: 38000.00,
-    paymentDue: 38000.00,
-    itemsCount: 65
-  }
-];
+export const INITIAL_TAMANNA_PURCHASES: Purchase[] = [];
 
-export const INITIAL_TAMANNA_EXPENSES: Expense[] = [
-  {
-    id: "exp-tm-1",
-    expenseNo: "EXP-2026-401",
-    category: "Rent",
-    businessLocation: "Dhaka Central Showroom",
-    expenseDate: "2026-10-01",
-    amount: 35000.00,
-    referenceNo: "RENT-OCT-01",
-    note: "Mirpur-10 Main Showroom and Workshop space monthly lease"
-  },
-  {
-    id: "exp-tm-2",
-    expenseNo: "EXP-2026-402",
-    category: "Utilities",
-    businessLocation: "Dhaka Central Showroom",
-    expenseDate: "2026-10-02",
-    amount: 5400.00,
-    referenceNo: "DESCO-2918",
-    note: "Commercial electricity and workshop high-voltage supply"
-  },
-  {
-    id: "exp-tm-3",
-    expenseNo: "EXP-2026-403",
-    category: "Salaries",
-    businessLocation: "Mirpur Branch",
-    expenseDate: "2026-09-30",
-    amount: 45000.00,
-    referenceNo: "PAYROLL-WK39",
-    note: "Master mechanics and service technicians weekly advance wages"
-  }
-];
+export const INITIAL_TAMANNA_EXPENSES: Expense[] = [];
 
 const STORAGE_KEYS = {
   PRODUCTS: 'tamanna_db_products',
@@ -343,7 +282,9 @@ const STORAGE_KEYS = {
   THEME: 'tamanna_theme',
   LANG: 'tamanna_lang',
   STAFF_USERS: 'tamanna_staff_users',
-  CURRENT_USER: 'tamanna_current_user'
+  CURRENT_USER: 'tamanna_current_user',
+  AUDIT_LOGS: 'tamanna_audit_logs',
+  DELETE_REQUESTS: 'tamanna_delete_requests'
 };
 
 export const DatabaseStorage = {
@@ -367,9 +308,11 @@ export const DatabaseStorage = {
   loadSuppliers(): Contact[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SUPPLIERS);
-      return data ? JSON.parse(data) : INITIAL_TAMANNA_SUPPLIERS;
+      if (!data) return [];
+      const parsed: Contact[] = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed.filter(c => c && c.id && !c.id.startsWith('tm-sup-') && !c.id.startsWith('sup-')) : [];
     } catch {
-      return INITIAL_TAMANNA_SUPPLIERS;
+      return [];
     }
   },
 
@@ -384,7 +327,10 @@ export const DatabaseStorage = {
   loadCustomers(): Contact[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      return data ? JSON.parse(data) : INITIAL_TAMANNA_CUSTOMERS;
+      if (!data) return INITIAL_TAMANNA_CUSTOMERS;
+      const parsed: Contact[] = JSON.parse(data);
+      const filtered = Array.isArray(parsed) ? parsed.filter(c => c && c.id && !c.id.startsWith('tm-cust-')) : [];
+      return filtered.length > 0 ? filtered : INITIAL_TAMANNA_CUSTOMERS;
     } catch {
       return INITIAL_TAMANNA_CUSTOMERS;
     }
@@ -401,9 +347,11 @@ export const DatabaseStorage = {
   loadSales(): Sale[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SALES);
-      return data ? JSON.parse(data) : INITIAL_TAMANNA_SALES;
+      if (!data) return [];
+      const parsed: Sale[] = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed.filter(s => s && s.id && !s.id.startsWith('tm-sale-') && !s.id.startsWith('sale-')) : [];
     } catch {
-      return INITIAL_TAMANNA_SALES;
+      return [];
     }
   },
 
@@ -418,7 +366,19 @@ export const DatabaseStorage = {
   loadBusinessSettings(): BusinessSettings {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.BUSINESS);
-      return data ? JSON.parse(data) : TAMANNA_BUSINESS_SETTINGS;
+      if (!data) return TAMANNA_BUSINESS_SETTINGS;
+      const parsed: BusinessSettings = JSON.parse(data);
+      // Clean mock unsplash URLs
+      if (parsed.logoUrl && parsed.logoUrl.includes('unsplash.com')) {
+        parsed.logoUrl = '';
+      }
+      // Ensure official updated Hazigonj Chandpur address
+      if (!parsed.address || parsed.address.includes('Mirpur-10')) {
+        parsed.address = TAMANNA_BUSINESS_SETTINGS.address;
+        parsed.contactPhone = TAMANNA_BUSINESS_SETTINGS.contactPhone;
+        parsed.primaryLocation = TAMANNA_BUSINESS_SETTINGS.primaryLocation;
+      }
+      return parsed;
     } catch {
       return TAMANNA_BUSINESS_SETTINGS;
     }
@@ -435,7 +395,13 @@ export const DatabaseStorage = {
   loadInvoiceSettings(): InvoiceSettings {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.INVOICE);
-      return data ? JSON.parse(data) : TAMANNA_INVOICE_SETTINGS;
+      if (!data) return TAMANNA_INVOICE_SETTINGS;
+      const parsed: InvoiceSettings = JSON.parse(data);
+      // Clean mock unsplash URLs
+      if (parsed.logoUrl && parsed.logoUrl.includes('unsplash.com')) {
+        parsed.logoUrl = '';
+      }
+      return parsed;
     } catch {
       return TAMANNA_INVOICE_SETTINGS;
     }
@@ -452,9 +418,11 @@ export const DatabaseStorage = {
   loadPurchases(): Purchase[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PURCHASES);
-      return data ? JSON.parse(data) : INITIAL_TAMANNA_PURCHASES;
+      if (!data) return [];
+      const parsed: Purchase[] = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed.filter(p => p && p.id && !p.id.startsWith('pur-tm-') && !p.id.startsWith('pur-')) : [];
     } catch {
-      return INITIAL_TAMANNA_PURCHASES;
+      return [];
     }
   },
 
@@ -469,9 +437,11 @@ export const DatabaseStorage = {
   loadExpenses(): Expense[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.EXPENSES);
-      return data ? JSON.parse(data) : INITIAL_TAMANNA_EXPENSES;
+      if (!data) return [];
+      const parsed: Expense[] = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed.filter(e => e && e.id && !e.id.startsWith('exp-tm-') && !e.id.startsWith('exp-')) : [];
     } catch {
-      return INITIAL_TAMANNA_EXPENSES;
+      return [];
     }
   },
 
@@ -615,5 +585,64 @@ export const DatabaseStorage = {
     } catch (e) {
       console.error(e);
     }
+  },
+
+  loadAuditLogs(): AuditLog[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveAuditLogs(logs: AuditLog[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs));
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  addAuditLog(entry: Omit<AuditLog, 'id' | 'timestamp'>): AuditLog {
+    const logs = this.loadAuditLogs();
+    const newLog: AuditLog = {
+      ...entry,
+      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: new Date().toLocaleString()
+    };
+    const updated = [newLog, ...logs.slice(0, 499)]; // keep latest 500
+    this.saveAuditLogs(updated);
+    return newLog;
+  },
+
+  loadDeleteRequests(): DeleteRequest[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.DELETE_REQUESTS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveDeleteRequests(requests: DeleteRequest[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DELETE_REQUESTS, JSON.stringify(requests));
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  addDeleteRequest(req: Omit<DeleteRequest, 'id' | 'requestedAt' | 'status'>): DeleteRequest {
+    const requests = this.loadDeleteRequests();
+    const newReq: DeleteRequest = {
+      ...req,
+      id: `del-req-${Date.now()}`,
+      requestedAt: new Date().toLocaleString(),
+      status: 'Pending'
+    };
+    const updated = [newReq, ...requests];
+    this.saveDeleteRequests(updated);
+    return newReq;
   }
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   Lock, 
@@ -19,7 +19,12 @@ import {
   LogIn,
   Store,
   Check,
-  BadgeCheck
+  BadgeCheck,
+  KeyRound,
+  Copy,
+  RotateCcw,
+  Inbox,
+  X
 } from 'lucide-react';
 import { AuthUser, UserRole } from '../types';
 import { Language, TRANSLATIONS } from '../i18n/translations';
@@ -27,7 +32,7 @@ import { Language, TRANSLATIONS } from '../i18n/translations';
 interface LoginViewProps {
   staffUsers: AuthUser[];
   onLogin: (user: AuthUser) => void;
-  onRegister?: (user: AuthUser) => void;
+  onRegister?: (user: AuthUser, autoLogin?: boolean) => void;
   lang: Language;
   onToggleLang: (lang: Language) => void;
   theme: 'light' | 'dark';
@@ -68,12 +73,77 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regRole, setRegRole] = useState<UserRole>('super_admin');
-  const [regBranch, setRegBranch] = useState('Dhaka Central Showroom');
+  const [regBranch, setRegBranch] = useState('Hazigonj Branch');
 
   // UI status
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Super Admin Email OTP State
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [enteredOtp, setEnteredOtp] = useState('');
+  const [otpCountdown, setOtpCountdown] = useState(60);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [pendingSuperAdminUser, setPendingSuperAdminUser] = useState<AuthUser | null>(null);
+  const [simulatedEmailToast, setSimulatedEmailToast] = useState<{
+    email: string;
+    code: string;
+  } | null>(null);
+  const [copiedOtp, setCopiedOtp] = useState(false);
+
+  useEffect(() => {
+    let timer: any;
+    if (isOtpModalOpen && otpCountdown > 0) {
+      timer = setInterval(() => {
+        setOtpCountdown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isOtpModalOpen, otpCountdown]);
+
+  const handleResendOtp = () => {
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(newCode);
+    setEnteredOtp('');
+    setOtpCountdown(60);
+    setOtpError(null);
+    if (pendingSuperAdminUser) {
+      setSimulatedEmailToast({
+        email: pendingSuperAdminUser.email,
+        code: newCode
+      });
+    }
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (enteredOtp.trim() !== generatedOtp.trim()) {
+      setOtpError(lang === 'bn' ? 'ভুল ওটিপি কোড! অনুগ্রহ করে আবার চেষ্টা করুন।' : 'Invalid OTP code! Please try again.');
+      return;
+    }
+    if (pendingSuperAdminUser) {
+      const verifiedUser: AuthUser = {
+        ...pendingSuperAdminUser,
+        status: 'Active'
+      };
+      setIsOtpModalOpen(false);
+      setSimulatedEmailToast(null);
+      setSuccessMsg(
+        lang === 'bn' 
+          ? 'সুপার অ্যাডমিন ওটিপি সফলভাবে যাচাই হয়েছে! টার্মিনালে প্রবেশ করা হচ্ছে...' 
+          : 'Super Admin OTP verified successfully! Launching terminal...'
+      );
+      setTimeout(() => {
+        if (onRegister) {
+          onRegister(verifiedUser, true);
+        } else {
+          onLogin(verifiedUser);
+        }
+      }, 350);
+    }
+  };
 
   // Handle Sign In submission
   const handleSignIn = (e: React.FormEvent) => {
@@ -104,6 +174,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
           lang === 'bn' 
             ? 'এই ইউজারনেম বা ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি! অনুগ্রহ করে প্রথমে "সাইন আপ" ট্যাবে অ্যাকাউন্ট তৈরি করুন।' 
             : 'Account not found! Please register a new account under the "Sign Up" tab first.'
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (matched.status === 'Pending Approval') {
+        setError(
+          lang === 'bn' 
+            ? '⚠️ আপনার অ্যাকাউন্টটি এখনও সুপার অ্যাডমিন কর্তৃক অনুমোদিত হয়নি! অনুগ্রহ করে প্রধান সুপার অ্যাডমিন বা ম্যানেজমেন্টের সাথে যোগাযোগ করুন। (Status: Pending Super Admin Authorization)' 
+            : '⚠️ This account is pending Super Admin authorization! Please contact the Super Admin to authorize your access before logging in.'
         );
         setLoading(false);
         return;
@@ -181,33 +261,62 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setLoading(true);
 
     setTimeout(() => {
-      const newUser: AuthUser = {
+      // Super Admin: Send OTP to email and require verification
+      if (regRole === 'super_admin') {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const newSuperAdmin: AuthUser = {
+          id: `usr-${Date.now()}`,
+          name: cleanName,
+          username: cleanUser,
+          email: cleanEmail || `${cleanUser}@tamannamotors.com`,
+          phone: regPhone.trim() || '+880 1700-000000',
+          password: regPassword,
+          role: regRole,
+          businessLocation: regBranch,
+          status: 'Active',
+          lastLogin: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        setGeneratedOtp(code);
+        setEnteredOtp('');
+        setOtpCountdown(60);
+        setOtpError(null);
+        setPendingSuperAdminUser(newSuperAdmin);
+        setIsOtpModalOpen(true);
+        setSimulatedEmailToast({
+          email: newSuperAdmin.email,
+          code
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Non-super admin staff: Must be authorized by Super Admin!
+      const newStaffUser: AuthUser = {
         id: `usr-${Date.now()}`,
         name: cleanName,
         username: cleanUser,
-        email: cleanEmail || `${cleanUser}@domain.com`,
+        email: cleanEmail || `${cleanUser}@tamannamotors.com`,
         phone: regPhone.trim() || '+880 1700-000000',
         password: regPassword,
         role: regRole,
         businessLocation: regBranch,
-        status: 'Active',
-        lastLogin: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        status: 'Pending Approval',
+        lastLogin: 'Never'
       };
 
       setLoading(false);
+      if (onRegister) {
+        onRegister(newStaffUser, false);
+      }
       setSuccessMsg(
         lang === 'bn' 
-          ? `অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে! টার্মিনালে প্রবেশ করা হচ্ছে...` 
-          : `Account successfully created! Signing you in...`
+          ? `নিবন্ধন সফল হয়েছে! আইডি: '${cleanUser}'। আপনার অ্যাকাউন্টটি সুপার অ্যাডমিনের অনুমোদনের অপেক্ষায় রয়েছে (Pending Super Admin Authorization)। অনুমোদন পাওয়ার পর সাইন ইন করতে পারবেন।` 
+          : `Registration successful! ID: '${cleanUser}'. Your account is pending Super Admin authorization. You will be able to sign in once authorized.`
       );
-
-      setTimeout(() => {
-        if (onRegister) {
-          onRegister(newUser);
-        } else {
-          onLogin(newUser);
-        }
-      }, 350);
+      setActiveTab('signin');
+      setIdentifier(cleanUser);
+      setPassword('');
     }, 300);
   };
 
@@ -363,7 +472,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       required
                       value={regName}
                       onChange={(e) => setRegName(e.target.value)}
-                      placeholder="e.g. Fariz Hossen"
+                      placeholder={lang === 'bn' ? 'যেমন: মোহাম্মদ রহিম' : 'e.g. Md. Rahim Ali'}
                       className="w-full rounded-xl border border-white/10 bg-white/[0.05] pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:bg-white/[0.08] focus:ring-2 focus:ring-emerald-500/20 focus:outline-hidden backdrop-blur-md transition-all"
                     />
                   </div>
@@ -382,7 +491,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       required
                       value={regUsername}
                       onChange={(e) => setRegUsername(e.target.value)}
-                      placeholder="e.g. fariz93"
+                      placeholder="e.g. admin101"
                       className="w-full rounded-xl border border-white/10 bg-white/[0.05] pl-8 pr-3 py-2 text-white placeholder-slate-500 focus:border-emerald-400 focus:bg-white/[0.08] focus:ring-2 focus:ring-emerald-500/20 focus:outline-hidden backdrop-blur-md font-mono transition-all"
                     />
                   </div>
@@ -501,9 +610,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     onChange={(e) => setRegBranch(e.target.value)}
                     className="w-full rounded-xl border border-white/10 bg-slate-900/90 px-3 py-2 text-white focus:border-emerald-400 focus:outline-hidden backdrop-blur-md cursor-pointer"
                   >
-                    <option value="Dhaka Central Showroom">Dhaka Central Showroom</option>
-                    <option value="Mirpur Branch">Mirpur Branch</option>
-                    <option value="Chittagong Hub">Chittagong Hub</option>
+                    <option value="Hazigonj Branch">Hazigonj Branch (হাজীগঞ্জ শাখা, চাঁদপুর)</option>
                   </select>
                 </div>
               </div>

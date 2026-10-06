@@ -76,17 +76,31 @@ export interface SaleItem {
   subtotal: number;
 }
 
+export interface DuePaymentRecord {
+  id: string;
+  paymentDate: string;
+  amountPaid: number;
+  paymentMethod: string;
+  remainingDue: number;
+  receivedBy?: string;
+  notes?: string;
+}
+
 export interface Sale {
   id: string;
   invoiceNo: string;
   type: 'pos' | 'sale' | 'draft';
   customerName: string;
+  customerPhone?: string;
   businessLocation: string;
   paymentStatus: 'Paid' | 'Due' | 'Partial';
-  paymentMethod: 'Cash' | 'Card' | 'Bank Transfer' | 'Credit';
+  paymentMethod: 'Cash' | 'Card' | 'Bank Transfer' | 'Credit' | 'bKash/Nagad';
   totalAmount: number;
   invoiceDue: number;
   saleDate: string;
+  dueDate?: string;
+  dueNotes?: string;
+  duePayments?: DuePaymentRecord[];
   itemsCount: number;
   items?: CartItem[];
   subtotal?: number;
@@ -107,9 +121,40 @@ export interface AuthUser {
   role: UserRole;
   phone: string;
   businessLocation: string;
-  status: 'Active' | 'Suspended';
+  status: 'Active' | 'Suspended' | 'Pending Approval';
   avatar?: string;
   lastLogin?: string;
+  createdAt?: string;
+}
+
+export interface DeleteRequest {
+  id: string;
+  entityType: 'Product' | 'Sale' | 'Expense' | 'Contact';
+  entityId: string;
+  entityTitle: string;
+  requestedBy: string;
+  requestedByRole: UserRole;
+  requestedAt: string;
+  reason: string;
+  details?: string;
+  branch: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  action: 'DELETED' | 'DAMAGED' | 'APPROVED' | 'REJECTED' | 'STAFF_REGISTERED' | 'STAFF_APPROVED' | 'ROLE_CHANGED' | 'LOGIN';
+  entityType: 'Product' | 'Sale' | 'Expense' | 'Contact' | 'Staff' | 'System';
+  entityId: string;
+  entityTitle: string;
+  performedBy: string;
+  userRole: UserRole;
+  reason?: string;
+  details?: string;
+  branch?: string;
 }
 
 export interface SalesReturn {

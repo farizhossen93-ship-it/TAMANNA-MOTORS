@@ -16,7 +16,7 @@ export const AddPurchaseModal: React.FC<AddPurchaseModalProps> = ({
   onAddPurchase
 }) => {
   const [supplierName, setSupplierName] = useState(suppliers[0]?.businessName || suppliers[0]?.name || 'Northstar Electronics Ltd');
-  const [location, setLocation] = useState('Main Branch');
+  const [location, setLocation] = useState('Hazigonj Branch');
   const [purchaseStatus, setPurchaseStatus] = useState<'Received' | 'Pending' | 'Ordered'>('Received');
   const [paymentStatus, setPaymentStatus] = useState<'Paid' | 'Due' | 'Partial'>('Paid');
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10));
@@ -95,9 +95,7 @@ export const AddPurchaseModal: React.FC<AddPurchaseModalProps> = ({
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 p-2 focus:border-slate-500 focus:outline-none"
               >
-                <option value="Main Branch">Main Branch</option>
-                <option value="Downtown Store">Downtown Store</option>
-                <option value="Westside Hub">Westside Hub</option>
+                <option value="Hazigonj Branch">Hazigonj Branch (হাজীগঞ্জ শাখা)</option>
               </select>
             </div>
             <div>

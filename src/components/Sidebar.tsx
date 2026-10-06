@@ -19,7 +19,8 @@ import {
   Search,
   Sparkles,
   Layers,
-  CircleDot
+  CircleDot,
+  CreditCard
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 import { BusinessSettings } from '../types';
@@ -113,6 +114,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       category: 'core'
     },
     {
+      id: 'synced-dues',
+      labelKey: lang === 'bn' ? 'বকেয়া ও দেনা-পাওনা' : 'Synced Dues Ledger',
+      icon: <CreditCard className="h-4 w-4 shrink-0 text-rose-500" />,
+      category: 'core'
+    },
+    {
       id: 'contact',
       labelKey: t.nav.contact,
       icon: <Contact className="h-4 w-4 shrink-0" />,
@@ -152,6 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       category: 'operations',
       children: [
         { id: 'sales-all', labelKey: t.nav.allSales },
+        { id: 'synced-dues', labelKey: lang === 'bn' ? 'বকেয়া খতিয়ান ও আদায়' : 'Synced Dues Hub' },
         { id: 'sales-add', labelKey: t.nav.addSale },
         { id: 'sales-pos-list', labelKey: t.nav.listOfPos },
         { id: 'sales-add-draft', labelKey: t.nav.addDraft },
