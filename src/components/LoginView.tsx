@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { AuthUser, UserRole } from '../types';
 import { Language, TRANSLATIONS } from '../i18n/translations';
+import { FirestoreSync } from '../data/firestoreSync';
 
 interface LoginViewProps {
   staffUsers: AuthUser[];
@@ -117,7 +118,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (enteredOtp.trim() !== generatedOtp.trim()) {
       setOtpError(lang === 'bn' ? 'ভুল ওটিপি কোড! অনুগ্রহ করে আবার চেষ্টা করুন।' : 'Invalid OTP code! Please try again.');
@@ -129,12 +130,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
         ...pendingSuperAdminUser,
         status: isSuperAdmin ? 'Active' : 'Pending Approval'
       };
+
+      // Instantly push to Firebase Firestore Online Database!
+      await FirestoreSync.upsertUser(verifiedUser);
+
       setIsOtpModalOpen(false);
       setSimulatedEmailToast(null);
       setSuccessMsg(
         lang === 'bn' 
-          ? (isSuperAdmin ? 'সুপার অ্যাডমিন ওটিপি সফলভাবে যাচাই হয়েছে! টার্মিনালে প্রবেশ করা হচ্ছে...' : 'ওটিপি সফলভাবে যাচাই হয়েছে! সুপার অ্যাডমিন অনুমোদনের অপেক্ষা করুন।')
-          : (isSuperAdmin ? 'Super Admin OTP verified successfully! Launching terminal...' : 'OTP verified! Awaiting Super Admin authorization.')
+          ? (isSuperAdmin ? 'সুপার অ্যাডমিন অ্যাকাউন্ট ফায়ারবেস ক্লাউডে নিবন্ধিত হয়েছে! ড্যাশবোর্ডে প্রবেশ করা হচ্ছে...' : 'ওটিপি যাচাই হয়েছে! সুপার অ্যাডমিন অনুমোদনের পর সাইন ইন করুন।')
+          : (isSuperAdmin ? 'Super Admin account saved in Firebase Firestore! Launching terminal...' : 'OTP verified! Awaiting Super Admin authorization.')
       );
       setTimeout(() => {
         if (onRegister) {
@@ -147,7 +152,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   };
 
   // Handle Sign In submission
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
@@ -164,17 +169,52 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
     setLoading(true);
 
-    setTimeout(() => {
-      // Find matching user from database
-      const matched = staffUsers.find(u => 
-        (u.email.toLowerCase() === cleanIdent || u.username.toLowerCase() === cleanIdent)
+    try {
+      // Fetch live users directly from Firebase Firestore & Backend API
+      const [firestoreUsers, apiUsers] = await Promise.allSettled([
+        FirestoreSync.fetchUsers(),
+        fetch('/api/users').then(r => r.ok ? r.json() : [])
+      ]);
+
+      let allLiveUsers: AuthUser[] = [];
+
+      if (firestoreUsers.status === 'fulfilled' && Array.isArray(firestoreUsers.value) && firestoreUsers.value.length > 0) {
+        allLiveUsers = [...firestoreUsers.value];
+      } else {
+        allLiveUsers = [...staffUsers];
+      }
+
+      if (apiUsers.status === 'fulfilled' && Array.isArray(apiUsers.value) && apiUsers.value.length > 0) {
+        const mapped = apiUsers.value.map((u: any) => ({
+          id: u.uid || u.id || `usr-${Date.now()}`,
+          name: u.name || u.username,
+          username: u.username,
+          email: u.email || `${u.username}@tamannamotors.com`,
+          password: u.password || '',
+          phone: u.phone || '+880 1700-000000',
+          role: u.role || 'cashier',
+          businessLocation: u.businessLocation || 'Hazigonj Branch',
+          status: u.status || 'Active',
+          lastLogin: u.lastLogin || 'Never'
+        }));
+        for (const m of mapped) {
+          if (!allLiveUsers.some(u => u.username?.toLowerCase() === m.username?.toLowerCase())) {
+            allLiveUsers.push(m);
+          }
+        }
+      }
+
+      // Find matching user from Firestore database
+      const matched = allLiveUsers.find(u => 
+        (u.username && u.username.toLowerCase() === cleanIdent) || 
+        (u.email && u.email.toLowerCase() === cleanIdent)
       );
 
       if (!matched) {
         setError(
           lang === 'bn' 
-            ? 'এই ইউজারনেম বা ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি! অনুগ্রহ করে প্রথমে "সাইন আপ" ট্যাবে অ্যাকাউন্ট তৈরি করুন।' 
-            : 'Account not found! Please register a new account under the "Sign Up" tab first.'
+            ? 'এই ইউজারনেম বা ইমেইলে কোনো অ্যাকাউন্ট পাওয়া যায়নি! "সাইন আপ" ট্যাবে নতুন অ্যাকাউন্ট তৈরি করুন।' 
+            : 'Account not found in Firebase Firestore! Please register a new account under "Sign Up".'
         );
         setLoading(false);
         return;
@@ -183,38 +223,54 @@ export const LoginView: React.FC<LoginViewProps> = ({
       if (matched.status === 'Pending Approval') {
         setError(
           lang === 'bn' 
-            ? '⚠️ আপনার অ্যাকাউন্টটি এখনও সুপার অ্যাডমিন কর্তৃক অনুমোদিত হয়নি! অনুগ্রহ করে প্রধান সুপার অ্যাডমিন বা ম্যানেজমেন্টের সাথে যোগাযোগ করুন। (Status: Pending Super Admin Authorization)' 
-            : '⚠️ This account is pending Super Admin authorization! Please contact the Super Admin to authorize your access before logging in.'
+            ? '⚠️ আপনার অ্যাকাউন্টটি এখনও সুপার অ্যাডমিন কর্তৃক অনুমোদিত হয়নি! অনুগ্রহ করে প্রধান সুপার অ্যাডমিন বা ম্যানেজমেন্টের সাথে যোগাযোগ করুন।' 
+            : '⚠️ This account is pending Super Admin authorization!'
         );
         setLoading(false);
         return;
       }
 
       if (matched.status === 'Suspended') {
-        setError(lang === 'bn' ? 'এই অ্যাকাউন্টটি সাময়িকভাবে স্থগিত রয়েছে। অ্যাডমিনের সাথে যোগাযোগ করুন।' : 'This account is suspended. Please contact the administrator.');
+        setError(
+          lang === 'bn' 
+            ? '⚠️ এই অ্যাকাউন্টটি সাময়িকভাবে স্থগিত রয়েছে। সুপার অ্যাডমিনের সাথে যোগাযোগ করুন।' 
+            : '⚠️ This account is suspended by Super Admin.'
+        );
         setLoading(false);
         return;
       }
 
       // Validate password
       if (matched.password && matched.password !== password) {
-        setError(lang === 'bn' ? 'পাসওয়ার্ড সঠিক নয়! পুনরায় চেষ্টা করুন।' : 'Incorrect password! Please try again.');
+        setError(
+          lang === 'bn' 
+            ? 'পাসওয়ার্ড সঠিক নয়! পুনরায় চেষ্টা করুন।' 
+            : 'Incorrect password! Please try again.'
+        );
         setLoading(false);
         return;
       }
 
       const updatedUser: AuthUser = {
         ...matched,
+        password: matched.password || password,
         lastLogin: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
+      // Persist login timestamp in Firebase Firestore
+      FirestoreSync.upsertUser(updatedUser);
+
       setLoading(false);
       onLogin(updatedUser);
-    }, 280);
+    } catch (err) {
+      console.error("Firebase Auth Sign-in error:", err);
+      setLoading(false);
+      setError(lang === 'bn' ? 'লগইন প্রক্রিয়া ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।' : 'Login failed. Please try again.');
+    }
   };
 
   // Handle Sign Up registration
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
@@ -244,37 +300,43 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
-    // Check if username already exists in registered staff
-    const existing = staffUsers.find(u => 
-      u.username.toLowerCase() === cleanUser || 
-      (cleanEmail && u.email.toLowerCase() === cleanEmail.toLowerCase())
-    );
-
-    if (existing) {
-      setError(
-        lang === 'bn' 
-          ? `ইউজারনেম '${cleanUser}' ইতিমধ্যে নিবন্ধিত! অনুগ্রহ করে সাইন ইন করুন অথবা ভিন্ন ইউজারনেম দিন।` 
-          : `Username '${cleanUser}' is already registered! Please sign in or choose another.`
-      );
-      return;
-    }
-
-    // Check Max 2 Super Admins limit
-    if (regRole === 'super_admin') {
-      const superAdminCount = staffUsers.filter(u => u.role === 'super_admin').length;
-      if (superAdminCount >= 2) {
-        setError(
-          lang === 'bn'
-            ? '⚠️ তামান্না মোটরস সিস্টেমে সর্বোচ্চ ২ জন সুপার অ্যাডমিন থাকতে পারে। অনুগ্রহ করে ক্যাশিয়ার বা ম্যানেজার হিসেবে নিবন্ধন করুন।'
-            : '⚠️ Maximum 2 Super Admins are allowed in Tamanna Motors ERP. Please register as Cashier or Manager.'
-        );
-        return;
-      }
-    }
-
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      // Live check from Firebase Firestore
+      const firestoreUsers = await FirestoreSync.fetchUsers();
+      const allUsers = [...firestoreUsers, ...staffUsers];
+
+      // Check if username already exists in registered staff
+      const existing = allUsers.find(u => 
+        (u.username && u.username.toLowerCase() === cleanUser) || 
+        (cleanEmail && u.email && u.email.toLowerCase() === cleanEmail.toLowerCase())
+      );
+
+      if (existing) {
+        setError(
+          lang === 'bn' 
+            ? `ইউজারনেম '${cleanUser}' ইতিমধ্যে নিবন্ধিত! অনুগ্রহ করে সাইন ইন করুন অথবা ভিন্ন ইউজারনেম দিন।` 
+            : `Username '${cleanUser}' is already registered! Please sign in or choose another.`
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Check Max 2 Super Admins limit
+      if (regRole === 'super_admin') {
+        const superAdminCount = allUsers.filter(u => u.role === 'super_admin').length;
+        if (superAdminCount >= 2) {
+          setError(
+            lang === 'bn'
+              ? '⚠️ তামান্না মোটরস সিস্টেমে সর্বোচ্চ ২ জন সুপার অ্যাডমিন থাকতে পারে। অনুগ্রহ করে ক্যাশিয়ার বা ম্যানেজার হিসেবে নিবন্ধন করুন।'
+              : '⚠️ Maximum 2 Super Admins are allowed in Tamanna Motors ERP. Please register as Cashier or Manager.'
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const newUserObj: AuthUser = {
         id: `usr-${Date.now()}`,
@@ -300,7 +362,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
         code
       });
       setLoading(false);
-    }, 300);
+
+    } catch (err) {
+      console.error("Sign up error:", err);
+      setLoading(false);
+      setError(lang === 'bn' ? 'নিবন্ধন প্রক্রিয়া ব্যর্থ হয়েছে।' : 'Registration failed.');
+    }
   };
 
   return (

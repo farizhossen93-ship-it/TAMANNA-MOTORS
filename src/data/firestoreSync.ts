@@ -117,6 +117,80 @@ export const FirestoreSync = {
     }
   },
 
+  // Sync Purchase
+  async upsertPurchase(purchase: Purchase) {
+    try {
+      const docRef = doc(db, 'purchases', purchase.id);
+      await setDoc(docRef, purchase, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `purchases/${purchase.id}`);
+    }
+  },
+
+  async deletePurchase(purchaseId: string) {
+    try {
+      const docRef = doc(db, 'purchases', purchaseId);
+      await deleteDoc(docRef);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `purchases/${purchaseId}`);
+    }
+  },
+
+  async fetchPurchases(): Promise<Purchase[]> {
+    try {
+      const snap = await getDocs(collection(db, 'purchases'));
+      const list: Purchase[] = [];
+      snap.forEach(d => list.push(d.data() as Purchase));
+      return list;
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, 'purchases');
+      return [];
+    }
+  },
+
+  // Sync Expense
+  async upsertExpense(expense: Expense) {
+    try {
+      const docRef = doc(db, 'expenses', expense.id);
+      await setDoc(docRef, expense, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `expenses/${expense.id}`);
+    }
+  },
+
+  async deleteExpense(expenseId: string) {
+    try {
+      const docRef = doc(db, 'expenses', expenseId);
+      await deleteDoc(docRef);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `expenses/${expenseId}`);
+    }
+  },
+
+  async fetchExpenses(): Promise<Expense[]> {
+    try {
+      const snap = await getDocs(collection(db, 'expenses'));
+      const list: Expense[] = [];
+      snap.forEach(d => list.push(d.data() as Expense));
+      return list;
+    } catch (e) {
+      handleFirestoreError(e, OperationType.LIST, 'expenses');
+      return [];
+    }
+  },
+
+  // Clear Collection helper for Super Admin Reset
+  async clearCollection(collName: 'products' | 'sales' | 'contacts' | 'purchases' | 'expenses') {
+    try {
+      const snap = await getDocs(collection(db, collName));
+      const promises: Promise<void>[] = [];
+      snap.forEach(d => promises.push(deleteDoc(doc(db, collName, d.id))));
+      await Promise.all(promises);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, collName);
+    }
+  },
+
   // Sync User
   async upsertUser(user: AuthUser) {
     try {

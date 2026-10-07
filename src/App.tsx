@@ -359,16 +359,32 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [currentUser, isSearchOpen, isShortcutsHelpOpen, isInvoiceScanOpen, isCalculatorOpen, viewingReceiptSale, isPosOpen]);
 
-  // Sync staff users to DB, backend API and monitor active user suspension
+  // Dedicated Staff Users Handler to sync updates & deletions across Firebase Firestore, Cloud SQL, and Local Storage
+  const handleUpdateStaffUsers = (nextUsers: AuthUser[]) => {
+    // Detect and delete removed staff from Firestore & Cloud SQL
+    const deletedUsers = staffUsers.filter(oldU => !nextUsers.some(nu => nu.id === oldU.id));
+    for (const delU of deletedUsers) {
+      FirestoreSync.deleteUser(delU.id);
+      fetch(`/api/users/${delU.id}`, { method: 'DELETE' }).catch(console.error);
+    }
+
+    // Upsert updated or new staff users to Firestore & Cloud SQL
+    for (const u of nextUsers) {
+      FirestoreSync.upsertUser(u);
+    }
+    fetch('/api/users/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ users: nextUsers })
+    }).catch(console.error);
+
+    setStaffUsers(nextUsers);
+    DatabaseStorage.saveStaffUsers(nextUsers);
+  };
+
+  // Sync staff users to DB and monitor active user suspension
   useEffect(() => {
     DatabaseStorage.saveStaffUsers(staffUsers);
-    if (staffUsers.length > 0) {
-      fetch('/api/users/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ users: staffUsers })
-      }).catch(console.error);
-    }
     if (currentUser) {
       const activeMatch = staffUsers.find(
         u => u.id === currentUser.id || u.username.toLowerCase() === currentUser.username.toLowerCase()
@@ -418,17 +434,11 @@ export default function App() {
   };
 
   const handleRegister = (newUser: AuthUser, autoLogin: boolean = true) => {
-    setStaffUsers(prev => {
-      const exists = prev.some(u => u.username.toLowerCase() === newUser.username.toLowerCase());
-      const next = exists ? prev.map(u => u.username.toLowerCase() === newUser.username.toLowerCase() ? newUser : u) : [...prev, newUser];
-      DatabaseStorage.saveStaffUsers(next);
-      return next;
-    });
-    fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newUser)
-    }).catch(console.error);
+    const exists = staffUsers.some(u => u.username.toLowerCase() === newUser.username.toLowerCase());
+    const next = exists
+      ? staffUsers.map(u => u.username.toLowerCase() === newUser.username.toLowerCase() ? newUser : u)
+      : [...staffUsers, newUser];
+    handleUpdateStaffUsers(next);
     SupabaseSync.upsertUser(newUser);
     if (autoLogin || newUser.role === 'super_admin') {
       handleLogin(newUser);
@@ -582,6 +592,7 @@ export default function App() {
         body: JSON.stringify(contact)
       }).catch(console.error);
       SupabaseSync.upsertContact(contact);
+      FirestoreSync.upsertContact(contact);
       setEditingContact(null);
       showSyncNotice(lang === 'bn' ? `সরবরাহকারী '${contact.businessName || contact.name}' সম্পাদিত ও সিঙ্ক হয়েছে।` : `Supplier '${contact.businessName || contact.name}' updated and synced.`);
     } else {
@@ -594,6 +605,7 @@ export default function App() {
         body: JSON.stringify(contact)
       }).catch(console.error);
       SupabaseSync.upsertContact(contact);
+      FirestoreSync.upsertContact(contact);
       showSyncNotice(lang === 'bn' ? `নতুন সরবরাহকারী '${contact.businessName || contact.name}' যুক্ত ও সিঙ্ক হয়েছে।` : `New supplier '${contact.businessName || contact.name}' added and synced.`);
     }
   };
@@ -609,6 +621,7 @@ export default function App() {
     DatabaseStorage.saveSuppliers(updated);
     fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
     SupabaseSync.deleteContact(row.id);
+    FirestoreSync.deleteContact(row.id);
     showSyncNotice(lang === 'bn' ? `সরবরাহকারী '${row.businessName || row.name}' মুছে ফেলা হয়েছে।` : `Supplier deleted and synced.`);
   };
 
@@ -623,6 +636,7 @@ export default function App() {
         body: JSON.stringify(contact)
       }).catch(console.error);
       SupabaseSync.upsertContact(contact);
+      FirestoreSync.upsertContact(contact);
       setEditingContact(null);
       showSyncNotice(lang === 'bn' ? `গ্রাহক '${contact.name}' সম্পাদিত ও সিঙ্ক হয়েছে।` : `Customer '${contact.name}' updated and synced.`);
     } else {
@@ -635,6 +649,7 @@ export default function App() {
         body: JSON.stringify(contact)
       }).catch(console.error);
       SupabaseSync.upsertContact(contact);
+      FirestoreSync.upsertContact(contact);
       showSyncNotice(lang === 'bn' ? `নতুন গ্রাহক '${contact.name}' যুক্ত ও সিঙ্ক হয়েছে।` : `New customer '${contact.name}' added and synced.`);
     }
   };
@@ -650,6 +665,7 @@ export default function App() {
     DatabaseStorage.saveCustomers(updated);
     fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
     SupabaseSync.deleteContact(row.id);
+    FirestoreSync.deleteContact(row.id);
     showSyncNotice(lang === 'bn' ? `গ্রাহক '${row.name}' মুছে ফেলা হয়েছে।` : `Customer '${row.name}' deleted and synced.`);
   };
 
@@ -663,6 +679,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(expense)
     }).catch(console.error);
+    FirestoreSync.upsertExpense(expense);
     showSyncNotice(lang === 'bn' ? `ব্যয় ভাউচার '${expense.expenseNo}' যুক্ত ও সিঙ্ক হয়েছে।` : `Expense '${expense.expenseNo}' added and synced.`);
   };
 
@@ -676,6 +693,7 @@ export default function App() {
     setExpenses(updated);
     DatabaseStorage.saveExpenses(updated);
     fetch(`/api/expenses/${row.id}`, { method: 'DELETE' }).catch(console.error);
+    FirestoreSync.deleteExpense(row.id);
     showSyncNotice(lang === 'bn' ? `ব্যয় '${row.expenseNo}' মুছে ফেলা হয়েছে।` : `Expense '${row.expenseNo}' deleted and synced.`);
   };
 
@@ -689,6 +707,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(purchase)
     }).catch(console.error);
+    FirestoreSync.upsertPurchase(purchase);
     showSyncNotice(lang === 'bn' ? `ক্রয় চালান '${purchase.purchaseNo}' যুক্ত ও সিঙ্ক হয়েছে।` : `Purchase order '${purchase.purchaseNo}' added and synced.`);
   };
 
@@ -702,6 +721,7 @@ export default function App() {
     setPurchases(updated);
     DatabaseStorage.savePurchases(updated);
     fetch(`/api/purchases/${row.id}`, { method: 'DELETE' }).catch(console.error);
+    FirestoreSync.deletePurchase(row.id);
     showSyncNotice(lang === 'bn' ? `ক্রয় অর্ডার '${row.purchaseNo}' মুছে ফেলা হয়েছে।` : `Purchase order deleted and synced.`);
   };
 
@@ -795,7 +815,7 @@ export default function App() {
     showSyncNotice(lang === 'bn' ? 'সকল পণ্যের বিক্রয় মূল্য সফলভাবে হালনাগাদ হয়েছে।' : 'Product selling prices updated successfully.');
   };
 
-  const handleClearAllMockData = () => {
+  const handleClearAllMockData = async () => {
     setProducts([]);
     setSales([]);
     setPurchases([]);
@@ -814,7 +834,18 @@ export default function App() {
     DatabaseStorage.saveAuditLogs([]);
     DatabaseStorage.saveDeleteRequests([]);
     fetch('/api/products', { method: 'DELETE' }).catch(err => console.error(err));
-    showSyncNotice(lang === 'bn' ? 'সকল পণ্য ও ডেমো ডেটা সফলভাবে মুছে ফেলা হয়েছে এবং সিস্টেম ব্যবহারের জন্য সম্পূর্ণ প্রস্তুত।' : 'All products and temporary data cleared successfully and system is ready to use.');
+    fetch('/api/sales', { method: 'DELETE' }).catch(err => console.error(err));
+    fetch('/api/expenses', { method: 'DELETE' }).catch(err => console.error(err));
+    fetch('/api/purchases', { method: 'DELETE' }).catch(err => console.error(err));
+    
+    await Promise.allSettled([
+      FirestoreSync.clearCollection('products'),
+      FirestoreSync.clearCollection('sales'),
+      FirestoreSync.clearCollection('purchases'),
+      FirestoreSync.clearCollection('expenses'),
+      FirestoreSync.clearCollection('contacts'),
+    ]);
+    showSyncNotice(lang === 'bn' ? 'সকল ডেটা ফায়ারবেস অনলাইন ক্লাউড ও সিস্টেম থেকে সম্পূর্ণভাবে মুছে ফেলা হয়েছে।' : 'All products and temporary data cleared from Firebase Cloud successfully.');
   };
 
   const handleRefreshDatabase = () => {
@@ -1114,7 +1145,7 @@ export default function App() {
         return (
           <UserManagementView
             users={staffUsers}
-            onUpdateUsers={setStaffUsers}
+            onUpdateUsers={handleUpdateStaffUsers}
             currentUser={currentUser}
             lang={lang}
           />
