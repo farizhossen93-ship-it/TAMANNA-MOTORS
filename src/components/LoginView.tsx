@@ -124,22 +124,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
     if (pendingSuperAdminUser) {
+      const isSuperAdmin = pendingSuperAdminUser.role === 'super_admin';
       const verifiedUser: AuthUser = {
         ...pendingSuperAdminUser,
-        status: 'Active'
+        status: isSuperAdmin ? 'Active' : 'Pending Approval'
       };
       setIsOtpModalOpen(false);
       setSimulatedEmailToast(null);
       setSuccessMsg(
         lang === 'bn' 
-          ? 'সুপার অ্যাডমিন ওটিপি সফলভাবে যাচাই হয়েছে! টার্মিনালে প্রবেশ করা হচ্ছে...' 
-          : 'Super Admin OTP verified successfully! Launching terminal...'
+          ? (isSuperAdmin ? 'সুপার অ্যাডমিন ওটিপি সফলভাবে যাচাই হয়েছে! টার্মিনালে প্রবেশ করা হচ্ছে...' : 'ওটিপি সফলভাবে যাচাই হয়েছে! সুপার অ্যাডমিন অনুমোদনের অপেক্ষা করুন।')
+          : (isSuperAdmin ? 'Super Admin OTP verified successfully! Launching terminal...' : 'OTP verified! Awaiting Super Admin authorization.')
       );
       setTimeout(() => {
         if (onRegister) {
-          onRegister(verifiedUser, true);
+          onRegister(verifiedUser, isSuperAdmin);
         } else {
-          onLogin(verifiedUser);
+          if (isSuperAdmin) onLogin(verifiedUser);
         }
       }, 350);
     }
@@ -258,41 +259,24 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
+    // Check Max 2 Super Admins limit
+    if (regRole === 'super_admin') {
+      const superAdminCount = staffUsers.filter(u => u.role === 'super_admin').length;
+      if (superAdminCount >= 2) {
+        setError(
+          lang === 'bn'
+            ? '⚠️ তামান্না মোটরস সিস্টেমে সর্বোচ্চ ২ জন সুপার অ্যাডমিন থাকতে পারে। অনুগ্রহ করে ক্যাশিয়ার বা ম্যানেজার হিসেবে নিবন্ধন করুন।'
+            : '⚠️ Maximum 2 Super Admins are allowed in Tamanna Motors ERP. Please register as Cashier or Manager.'
+        );
+        return;
+      }
+    }
+
     setLoading(true);
 
     setTimeout(() => {
-      // Super Admin: Send OTP to email and require verification
-      if (regRole === 'super_admin') {
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const newSuperAdmin: AuthUser = {
-          id: `usr-${Date.now()}`,
-          name: cleanName,
-          username: cleanUser,
-          email: cleanEmail || `${cleanUser}@tamannamotors.com`,
-          phone: regPhone.trim() || '+880 1700-000000',
-          password: regPassword,
-          role: regRole,
-          businessLocation: regBranch,
-          status: 'Active',
-          lastLogin: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-
-        setGeneratedOtp(code);
-        setEnteredOtp('');
-        setOtpCountdown(60);
-        setOtpError(null);
-        setPendingSuperAdminUser(newSuperAdmin);
-        setIsOtpModalOpen(true);
-        setSimulatedEmailToast({
-          email: newSuperAdmin.email,
-          code
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Non-super admin staff: Must be authorized by Super Admin!
-      const newStaffUser: AuthUser = {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const newUserObj: AuthUser = {
         id: `usr-${Date.now()}`,
         name: cleanName,
         username: cleanUser,
@@ -301,22 +285,21 @@ export const LoginView: React.FC<LoginViewProps> = ({
         password: regPassword,
         role: regRole,
         businessLocation: regBranch,
-        status: 'Pending Approval',
-        lastLogin: 'Never'
+        status: regRole === 'super_admin' ? 'Active' : 'Pending Approval',
+        lastLogin: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
+      setGeneratedOtp(code);
+      setEnteredOtp('');
+      setOtpCountdown(60);
+      setOtpError(null);
+      setPendingSuperAdminUser(newUserObj);
+      setIsOtpModalOpen(true);
+      setSimulatedEmailToast({
+        email: newUserObj.email,
+        code
+      });
       setLoading(false);
-      if (onRegister) {
-        onRegister(newStaffUser, false);
-      }
-      setSuccessMsg(
-        lang === 'bn' 
-          ? `নিবন্ধন সফল হয়েছে! আইডি: '${cleanUser}'। আপনার অ্যাকাউন্টটি সুপার অ্যাডমিনের অনুমোদনের অপেক্ষায় রয়েছে (Pending Super Admin Authorization)। অনুমোদন পাওয়ার পর সাইন ইন করতে পারবেন।` 
-          : `Registration successful! ID: '${cleanUser}'. Your account is pending Super Admin authorization. You will be able to sign in once authorized.`
-      );
-      setActiveTab('signin');
-      setIdentifier(cleanUser);
-      setPassword('');
     }, 300);
   };
 

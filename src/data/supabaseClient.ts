@@ -10,20 +10,26 @@ export interface SupabaseConfig {
 
 const STORAGE_KEY_SUPABASE = 'tamanna_supabase_config';
 
+export const DEFAULT_SUPABASE_URL = 'https://ymvpphrryprluwjoivur.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltdnBwaHJyeXBybHV3am9pdnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMDEyNTcsImV4cCI6MjEwNjg3NzI1N30.6c8uKTyv5jiO_Ru_kpUpDUfcrlsKulHt3KEqYLib8bY';
+
 export function loadSupabaseConfig(): SupabaseConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SUPABASE);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.url && parsed.anonKey) {
+        return parsed;
+      }
     }
   } catch (e) {
     console.error('Failed to load Supabase config:', e);
   }
 
   return {
-    url: (import.meta as any).env?.VITE_SUPABASE_URL || '',
-    anonKey: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '',
-    autoSync: false
+    url: (import.meta as any).env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL,
+    anonKey: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY,
+    autoSync: true
   };
 }
 

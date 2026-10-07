@@ -49,6 +49,7 @@ import { ReportsView } from './components/ReportsView';
 import { UserManagementView } from './components/UserManagementView';
 import { SyncedDuesView } from './components/SyncedDuesView';
 import { DatabaseControlView } from './components/DatabaseControlView';
+import { SupabaseSync } from './data/supabaseSync';
 import { ReceiptModal } from './components/ReceiptModal';
 import { LoginView } from './components/LoginView';
 import { InvoiceScanModal } from './components/InvoiceScanModal';
@@ -143,25 +144,57 @@ export default function App() {
     DatabaseStorage.saveInvoiceSettings(invoiceSettings);
   }, [invoiceSettings]);
 
-  // Load live data from Cloud SQL PostgreSQL backend API on startup
+  // Load live data from Cloud SQL PostgreSQL backend API and Supabase on startup
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
-        const [prodRes, saleRes, contactRes] = await Promise.allSettled([
+        const [prodRes, saleRes, contactRes, userRes, sbProds, sbSales, sbContacts] = await Promise.allSettled([
           fetch('/api/products').then(r => r.ok ? r.json() : null),
           fetch('/api/sales').then(r => r.ok ? r.json() : null),
           fetch('/api/contacts').then(r => r.ok ? r.json() : null),
+          fetch('/api/users').then(r => r.ok ? r.json() : null),
+          SupabaseSync.fetchProducts(),
+          SupabaseSync.fetchSales(),
+          SupabaseSync.fetchContacts(),
         ]);
 
-        if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
+        if (userRes.status === 'fulfilled' && Array.isArray(userRes.value) && userRes.value.length > 0) {
+          const mappedUsers: AuthUser[] = userRes.value.map((u: any) => ({
+            id: u.uid || u.id || `usr-${Date.now()}`,
+            name: u.name || u.username,
+            username: u.username,
+            email: u.email || `${u.username}@tamannamotors.com`,
+            password: u.password || '',
+            phone: u.phone || '+880 1700-000000',
+            role: u.role || 'cashier',
+            businessLocation: u.businessLocation || 'Hazigonj Branch',
+            status: u.status || 'Active',
+            lastLogin: u.lastLogin || 'Never'
+          }));
+          setStaffUsers(mappedUsers);
+          DatabaseStorage.saveStaffUsers(mappedUsers);
+        }
+
+        if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value) && prodRes.value.length > 0) {
           setProducts(prodRes.value);
+        } else if (sbProds.status === 'fulfilled' && Array.isArray(sbProds.value) && sbProds.value.length > 0) {
+          setProducts(sbProds.value);
         }
-        if (saleRes.status === 'fulfilled' && Array.isArray(saleRes.value)) {
+
+        if (saleRes.status === 'fulfilled' && Array.isArray(saleRes.value) && saleRes.value.length > 0) {
           setSales(saleRes.value);
+        } else if (sbSales.status === 'fulfilled' && Array.isArray(sbSales.value) && sbSales.value.length > 0) {
+          setSales(sbSales.value);
         }
-        if (contactRes.status === 'fulfilled' && Array.isArray(contactRes.value)) {
+
+        if (contactRes.status === 'fulfilled' && Array.isArray(contactRes.value) && contactRes.value.length > 0) {
           const custs = contactRes.value.filter((c: any) => c.type === 'customer');
           const sups = contactRes.value.filter((c: any) => c.type === 'supplier');
+          if (custs.length > 0) setCustomers(custs);
+          if (sups.length > 0) setSuppliers(sups);
+        } else if (sbContacts.status === 'fulfilled' && Array.isArray(sbContacts.value) && sbContacts.value.length > 0) {
+          const custs = sbContacts.value.filter((c: any) => c.type === 'customer');
+          const sups = sbContacts.value.filter((c: any) => c.type === 'supplier');
           if (custs.length > 0) setCustomers(custs);
           if (sups.length > 0) setSuppliers(sups);
         }
@@ -287,10 +320,50 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [currentUser, isSearchOpen, isShortcutsHelpOpen, isInvoiceScanOpen, isCalculatorOpen, viewingReceiptSale, isPosOpen]);
 
-  // Sync staff users to DB
+  // Sync staff users to DB, backend API and monitor active user suspension
   useEffect(() => {
     DatabaseStorage.saveStaffUsers(staffUsers);
-  }, [staffUsers]);
+    if (staffUsers.length > 0) {
+      fetch('/api/users/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ users: staffUsers })
+      }).catch(console.error);
+    }
+    if (currentUser) {
+      const activeMatch = staffUsers.find(
+        u => u.id === currentUser.id || u.username.toLowerCase() === currentUser.username.toLowerCase()
+      );
+      if (activeMatch && activeMatch.status === 'Suspended') {
+        setCurrentUser(null);
+        DatabaseStorage.saveCurrentUser(null);
+        showSyncNotice(lang === 'bn' ? '⚠️ আপনার অ্যাকাউন্টটি সাময়িকভাবে স্থগিত করা হয়েছে।' : '⚠️ Your account has been suspended by Super Admin.');
+      }
+    }
+  }, [staffUsers, currentUser]);
+
+  // Load IndexedDB backup data on mount if localStorage was empty/quota trimmed
+  useEffect(() => {
+    const loadFromIDB = async () => {
+      try {
+        const [idbProds, idbSales, idbCusts, idbSups, idbUsers] = await Promise.all([
+          DatabaseStorage.loadProductsAsync(),
+          DatabaseStorage.loadSalesAsync(),
+          DatabaseStorage.loadCustomersAsync(),
+          DatabaseStorage.loadSuppliersAsync(),
+          DatabaseStorage.loadStaffUsersAsync(),
+        ]);
+        if (idbProds && idbProds.length > 0) setProducts(idbProds);
+        if (idbSales && idbSales.length > 0) setSales(idbSales);
+        if (idbCusts && idbCusts.length > 0) setCustomers(idbCusts);
+        if (idbSups && idbSups.length > 0) setSuppliers(idbSups);
+        if (idbUsers && idbUsers.length > 0) setStaffUsers(idbUsers);
+      } catch (e) {
+        console.log("IndexedDB startup check:", e);
+      }
+    };
+    loadFromIDB();
+  }, []);
 
   // Sync current user to DB
   useEffect(() => {
@@ -305,14 +378,24 @@ export default function App() {
     showSyncNotice(lang === 'bn' ? `'${user.name}' হিসেবে সফলভাবে লগইন হয়েছে` : `Successfully signed in as '${user.name}'`);
   };
 
-  const handleRegister = (newUser: AuthUser) => {
+  const handleRegister = (newUser: AuthUser, autoLogin: boolean = true) => {
     setStaffUsers(prev => {
       const exists = prev.some(u => u.username.toLowerCase() === newUser.username.toLowerCase());
-      const next = exists ? prev : [...prev, newUser];
+      const next = exists ? prev.map(u => u.username.toLowerCase() === newUser.username.toLowerCase() ? newUser : u) : [...prev, newUser];
       DatabaseStorage.saveStaffUsers(next);
       return next;
     });
-    handleLogin(newUser);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newUser)
+    }).catch(console.error);
+    SupabaseSync.upsertUser(newUser);
+    if (autoLogin || newUser.role === 'super_admin') {
+      handleLogin(newUser);
+    } else {
+      showSyncNotice(lang === 'bn' ? 'নিবন্ধন সফল হয়েছে। সুপার অ্যাডমিন অনুমোদনের পর সাইন ইন করুন।' : 'Registration successful. Awaiting Super Admin approval.');
+    }
   };
 
   const handleLogout = () => {
@@ -414,6 +497,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: [newProd] })
       }).catch(console.error);
+      SupabaseSync.upsertProduct(newProd);
       setEditingProduct(null);
       showSyncNotice(lang === 'bn' ? `মোটর পার্টস '${newProd.name}' সফলভাবে সম্পাদিত ও ক্লাউডে সিঙ্ক হয়েছে।` : `Product '${newProd.name}' edited and synced.`);
     } else {
@@ -425,18 +509,23 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: [newProd] })
       }).catch(console.error);
+      SupabaseSync.upsertProduct(newProd);
       showSyncNotice(lang === 'bn' ? `নতুন পার্টস '${newProd.name}' যুক্ত ও ক্লাউড ডেটাবেজে সিঙ্ক হয়েছে।` : `New product '${newProd.name}' added and synced.`);
     }
   };
 
   const handleDeleteProduct = (prod: Product) => {
-    if (confirm(lang === 'bn' ? `${prod.name} মুছে ফেলতে চান?` : `Are you sure you want to delete ${prod.name}?`)) {
-      const updated = products.filter(p => p.id !== prod.id);
-      setProducts(updated);
-      DatabaseStorage.saveProducts(updated);
-      fetch(`/api/products/${prod.id}`, { method: 'DELETE' }).catch(err => console.error(err));
-      showSyncNotice(lang === 'bn' ? `'${prod.name}' মুছে ফেলা হয়েছে এবং ডাটাবেজ সিঙ্ক হয়েছে।` : `'${prod.name}' deleted and synced.`);
+    const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
+    if (!isSuper) {
+      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      return;
     }
+    const updated = products.filter(p => p.id !== prod.id);
+    setProducts(updated);
+    DatabaseStorage.saveProducts(updated);
+    fetch(`/api/products/${prod.id}`, { method: 'DELETE' }).catch(console.error);
+    SupabaseSync.deleteProduct(prod.id);
+    showSyncNotice(lang === 'bn' ? `'${prod.name}' মুছে ফেলা হয়েছে এবং ডাটাবেজ সিঙ্ক হয়েছে।` : `'${prod.name}' deleted and synced.`);
   };
 
   // Handlers for Contacts (Suppliers & Customers)
@@ -450,6 +539,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contact)
       }).catch(console.error);
+      SupabaseSync.upsertContact(contact);
       setEditingContact(null);
       showSyncNotice(lang === 'bn' ? `সরবরাহকারী '${contact.businessName || contact.name}' সম্পাদিত ও সিঙ্ক হয়েছে।` : `Supplier '${contact.businessName || contact.name}' updated and synced.`);
     } else {
@@ -461,18 +551,23 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contact)
       }).catch(console.error);
+      SupabaseSync.upsertContact(contact);
       showSyncNotice(lang === 'bn' ? `নতুন সরবরাহকারী '${contact.businessName || contact.name}' যুক্ত ও সিঙ্ক হয়েছে।` : `New supplier '${contact.businessName || contact.name}' added and synced.`);
     }
   };
 
   const handleDeleteSupplier = (row: Contact) => {
-    if (confirm(lang === 'bn' ? `সরবরাহকারী ${row.businessName || row.name} মুছতে চান?` : `Delete supplier ${row.businessName || row.name}?`)) {
-      const updated = suppliers.filter(s => s.id !== row.id);
-      setSuppliers(updated);
-      DatabaseStorage.saveSuppliers(updated);
-      fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
-      showSyncNotice(lang === 'bn' ? `সরবরাহকারী '${row.businessName || row.name}' মুছে ফেলা হয়েছে।` : `Supplier deleted and synced.`);
+    const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
+    if (!isSuper) {
+      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      return;
     }
+    const updated = suppliers.filter(s => s.id !== row.id);
+    setSuppliers(updated);
+    DatabaseStorage.saveSuppliers(updated);
+    fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
+    SupabaseSync.deleteContact(row.id);
+    showSyncNotice(lang === 'bn' ? `সরবরাহকারী '${row.businessName || row.name}' মুছে ফেলা হয়েছে।` : `Supplier deleted and synced.`);
   };
 
   const handleAddCustomer = (contact: Contact) => {
@@ -485,6 +580,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contact)
       }).catch(console.error);
+      SupabaseSync.upsertContact(contact);
       setEditingContact(null);
       showSyncNotice(lang === 'bn' ? `গ্রাহক '${contact.name}' সম্পাদিত ও সিঙ্ক হয়েছে।` : `Customer '${contact.name}' updated and synced.`);
     } else {
@@ -496,44 +592,75 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(contact)
       }).catch(console.error);
+      SupabaseSync.upsertContact(contact);
       showSyncNotice(lang === 'bn' ? `নতুন গ্রাহক '${contact.name}' যুক্ত ও সিঙ্ক হয়েছে।` : `New customer '${contact.name}' added and synced.`);
     }
   };
 
   const handleDeleteCustomer = (row: Contact) => {
-    if (confirm(lang === 'bn' ? `গ্রাহক ${row.name} মুছতে চান?` : `Delete customer ${row.name}?`)) {
-      const updated = customers.filter(c => c.id !== row.id);
-      setCustomers(updated);
-      DatabaseStorage.saveCustomers(updated);
-      fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
-      showSyncNotice(lang === 'bn' ? `গ্রাহক '${row.name}' মুছে ফেলা হয়েছে।` : `Customer '${row.name}' deleted and synced.`);
+    const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
+    if (!isSuper) {
+      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      return;
     }
+    const updated = customers.filter(c => c.id !== row.id);
+    setCustomers(updated);
+    DatabaseStorage.saveCustomers(updated);
+    fetch(`/api/contacts/${row.id}`, { method: 'DELETE' }).catch(console.error);
+    SupabaseSync.deleteContact(row.id);
+    showSyncNotice(lang === 'bn' ? `গ্রাহক '${row.name}' মুছে ফেলা হয়েছে।` : `Customer '${row.name}' deleted and synced.`);
   };
 
   // Handlers for Expenses
   const handleAddExpense = (expense: Expense) => {
-    setExpenses([expense, ...expenses]);
+    const updated = [expense, ...expenses];
+    setExpenses(updated);
+    DatabaseStorage.saveExpenses(updated);
+    fetch('/api/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(expense)
+    }).catch(console.error);
     showSyncNotice(lang === 'bn' ? `ব্যয় ভাউচার '${expense.expenseNo}' যুক্ত ও সিঙ্ক হয়েছে।` : `Expense '${expense.expenseNo}' added and synced.`);
   };
 
   const handleDeleteExpense = (row: Expense) => {
-    if (confirm(lang === 'bn' ? `ব্যয় ${row.expenseNo} মুছতে চান?` : `Delete expense ${row.expenseNo}?`)) {
-      setExpenses(prev => prev.filter(e => e.id !== row.id));
-      showSyncNotice(lang === 'bn' ? `ব্যয় '${row.expenseNo}' মুছে ফেলা হয়েছে।` : `Expense '${row.expenseNo}' deleted and synced.`);
+    const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
+    if (!isSuper) {
+      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      return;
     }
+    const updated = expenses.filter(e => e.id !== row.id);
+    setExpenses(updated);
+    DatabaseStorage.saveExpenses(updated);
+    fetch(`/api/expenses/${row.id}`, { method: 'DELETE' }).catch(console.error);
+    showSyncNotice(lang === 'bn' ? `ব্যয় '${row.expenseNo}' মুছে ফেলা হয়েছে।` : `Expense '${row.expenseNo}' deleted and synced.`);
   };
 
   // Handlers for Purchases
   const handleAddPurchase = (purchase: Purchase) => {
-    setPurchases([purchase, ...purchases]);
+    const updated = [purchase, ...purchases];
+    setPurchases(updated);
+    DatabaseStorage.savePurchases(updated);
+    fetch('/api/purchases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(purchase)
+    }).catch(console.error);
     showSyncNotice(lang === 'bn' ? `ক্রয় চালান '${purchase.purchaseNo}' যুক্ত ও সিঙ্ক হয়েছে।` : `Purchase order '${purchase.purchaseNo}' added and synced.`);
   };
 
   const handleDeletePurchase = (row: Purchase) => {
-    if (confirm(lang === 'bn' ? `ক্রয় অর্ডার ${row.purchaseNo} মুছতে চান?` : `Delete purchase order ${row.purchaseNo}?`)) {
-      setPurchases(prev => prev.filter(p => p.id !== row.id));
-      showSyncNotice(lang === 'bn' ? `ক্রয় অর্ডার '${row.purchaseNo}' মুছে ফেলা হয়েছে।` : `Purchase order deleted and synced.`);
+    const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
+    if (!isSuper) {
+      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      return;
     }
+    const updated = purchases.filter(p => p.id !== row.id);
+    setPurchases(updated);
+    DatabaseStorage.savePurchases(updated);
+    fetch(`/api/purchases/${row.id}`, { method: 'DELETE' }).catch(console.error);
+    showSyncNotice(lang === 'bn' ? `ক্রয় অর্ডার '${row.purchaseNo}' মুছে ফেলা হয়েছে।` : `Purchase order deleted and synced.`);
   };
 
   // Handlers for Stock Transfers
@@ -543,24 +670,45 @@ export default function App() {
   };
 
   const handleDeleteTransfer = (transfer: StockTransfer) => {
-    if (confirm(lang === 'bn' ? `স্টক ট্রান্সফার ${transfer.transferNo} মুছতে চান?` : `Delete transfer ${transfer.transferNo}?`)) {
-      setStockTransfers(prev => prev.filter(t => t.id !== transfer.id));
-      showSyncNotice(lang === 'bn' ? `স্টক ট্রান্সফার '${transfer.transferNo}' মুছে ফেলা হয়েছে।` : `Stock transfer deleted and synced.`);
+    const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
+    if (!isSuper) {
+      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      return;
     }
+    setStockTransfers(prev => prev.filter(t => t.id !== transfer.id));
+    showSyncNotice(lang === 'bn' ? `স্টক ট্রান্সফার '${transfer.transferNo}' মুছে ফেলা হয়েছে।` : `Stock transfer deleted and synced.`);
   };
 
   // Handlers for Sales
   const handleCompleteSale = (newSale: Sale, updatedProducts: Product[]) => {
     setSales([newSale, ...sales]);
     setProducts(updatedProducts);
-    showSyncNotice(lang === 'bn' ? `বিক্রয় চালান '${newSale.invoiceNo}' সফলভাবে সম্পন্ন ও সিঙ্ক হয়েছে।` : `Sale invoice '${newSale.invoiceNo}' completed and synced.`);
+    DatabaseStorage.saveSales([newSale, ...sales]);
+    DatabaseStorage.saveProducts(updatedProducts);
+    fetch('/api/sales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSale)
+    }).catch(console.error);
+    SupabaseSync.upsertSale(newSale);
+    for (const p of updatedProducts) {
+      SupabaseSync.upsertProduct(p);
+    }
+    showSyncNotice(lang === 'bn' ? `বিক্রয় চালান '${newSale.invoiceNo}' সফলভাবে সম্পন্ন ও ক্লাউড সিঙ্ক হয়েছে।` : `Sale invoice '${newSale.invoiceNo}' completed and synced.`);
   };
 
   const handleDeleteSale = (sale: Sale) => {
-    if (confirm(lang === 'bn' ? `চালান ${sale.invoiceNo} মুছে ফেলতে চান?` : `Are you sure you want to delete invoice ${sale.invoiceNo}?`)) {
-      setSales(prev => prev.filter(s => s.id !== sale.id));
-      showSyncNotice(lang === 'bn' ? `চালান '${sale.invoiceNo}' মুছে ফেলা হয়েছে এবং ডাটাবেজ সিঙ্ক হয়েছে।` : `Invoice '${sale.invoiceNo}' deleted and synced.`);
+    const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
+    if (!isSuper) {
+      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      return;
     }
+    const updated = sales.filter(s => s.id !== sale.id);
+    setSales(updated);
+    DatabaseStorage.saveSales(updated);
+    fetch(`/api/sales/${sale.id}`, { method: 'DELETE' }).catch(console.error);
+    SupabaseSync.deleteSale(sale.id);
+    showSyncNotice(lang === 'bn' ? `চালান '${sale.invoiceNo}' মুছে ফেলা হয়েছে এবং ডাটাবেজ সিঙ্ক হয়েছে।` : `Invoice '${sale.invoiceNo}' deleted and synced.`);
   };
 
   // Super Admin: Universal Edit Entry Save Handler
@@ -1204,8 +1352,15 @@ export default function App() {
           <SyncedDuesView
             sales={sales}
             onUpdateSale={(updatedSale) => {
-              setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
-              DatabaseStorage.saveSales(sales.map(s => s.id === updatedSale.id ? updatedSale : s));
+              const updated = sales.map(s => s.id === updatedSale.id ? updatedSale : s);
+              setSales(updated);
+              DatabaseStorage.saveSales(updated);
+              fetch('/api/sales', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedSale)
+              }).catch(console.error);
+              SupabaseSync.upsertSale(updatedSale);
             }}
             onOpenReceipt={(sale, isMoney) => {
               setViewingReceiptSale(sale);
@@ -1378,9 +1533,15 @@ export default function App() {
             onSaveBusiness={setBusinessSettings}
             onSaveInvoice={setInvoiceSettings}
             lang={lang}
+            isSuperAdmin={currentUser?.role === 'super_admin'}
             onClearTempData={handleClearTempSales}
             onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
+            onRestoreCatalog={() => {
+              setProducts(INITIAL_TAMANNA_PRODUCTS);
+              DatabaseStorage.saveProducts(INITIAL_TAMANNA_PRODUCTS);
+              showSyncNotice(lang === 'bn' ? 'ডিফল্ট পার্টস ক্যাটালগ সফলভাবে রিস্টোর করা হয়েছে!' : 'Default Tamanna Motors catalog restored successfully!');
+            }}
           />
         );
 
@@ -1393,9 +1554,15 @@ export default function App() {
             onSaveBusiness={setBusinessSettings}
             onSaveInvoice={setInvoiceSettings}
             lang={lang}
+            isSuperAdmin={currentUser?.role === 'super_admin'}
             onClearTempData={handleClearTempSales}
             onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
+            onRestoreCatalog={() => {
+              setProducts(INITIAL_TAMANNA_PRODUCTS);
+              DatabaseStorage.saveProducts(INITIAL_TAMANNA_PRODUCTS);
+              showSyncNotice(lang === 'bn' ? 'ডিফল্ট পার্টস ক্যাটালগ সফলভাবে রিস্টোর করা হয়েছে!' : 'Default Tamanna Motors catalog restored successfully!');
+            }}
           />
         );
 
@@ -1416,6 +1583,14 @@ export default function App() {
                   setSuppliers(data.filter((c: any) => c.type === 'supplier'));
                 }
               }).catch(console.error);
+            }}
+            onApplySupabaseData={(data) => {
+              if (data.products) setProducts(data.products);
+              if (data.sales) setSales(data.sales);
+              if (data.contacts) {
+                setCustomers(data.contacts.filter(c => c.type === 'customer'));
+                setSuppliers(data.contacts.filter(c => c.type === 'supplier'));
+              }
             }}
           />
         );
@@ -1475,6 +1650,7 @@ export default function App() {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         lang={lang}
         businessSettings={businessSettings}
+        userRole={currentUser?.role || userRole}
       />
 
       {/* Main Container */}

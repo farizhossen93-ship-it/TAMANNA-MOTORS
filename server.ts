@@ -233,6 +233,18 @@ app.post('/api/sales', async (req, res) => {
   }
 });
 
+app.delete('/api/sales/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(schema.duePayments).where(eq(schema.duePayments.saleId, id));
+    await db.delete(schema.sales).where(eq(schema.sales.id, id));
+    res.json({ success: true, id });
+  } catch (error: any) {
+    console.error('Error deleting sale:', error);
+    res.status(500).json({ error: 'Failed to delete sale' });
+  }
+});
+
 // Contacts API
 app.get('/api/contacts', async (req, res) => {
   try {
@@ -337,6 +349,135 @@ app.delete('/api/contacts/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Error deleting contact:', error);
     res.status(500).json({ error: 'Failed to delete contact' });
+  }
+});
+
+// Users & Staff Management API
+app.get('/api/users', async (req, res) => {
+  try {
+    const allUsers = await db.select().from(schema.users);
+    res.json(allUsers);
+  } catch (error: any) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const u = req.body;
+    if (!u || !u.username) {
+      return res.status(400).json({ error: 'Invalid user payload' });
+    }
+
+    const uidKey = u.id || u.uid || `usr-${Date.now()}`;
+    await db.insert(schema.users)
+      .values({
+        uid: uidKey,
+        email: u.email || `${u.username}@tamannamotors.com`,
+        password: u.password || '',
+        name: u.name || u.username,
+        username: u.username,
+        role: u.role || 'cashier',
+        phone: u.phone || null,
+        businessLocation: u.businessLocation || 'Hazigonj Branch',
+        status: u.status || 'Active',
+        lastLogin: u.lastLogin || new Date().toISOString(),
+      })
+      .onConflictDoUpdate({
+        target: schema.users.uid,
+        set: {
+          email: u.email || `${u.username}@tamannamotors.com`,
+          password: u.password || '',
+          name: u.name || u.username,
+          username: u.username,
+          role: u.role || 'cashier',
+          phone: u.phone || null,
+          businessLocation: u.businessLocation || 'Hazigonj Branch',
+          status: u.status || 'Active',
+          lastLogin: u.lastLogin || new Date().toISOString(),
+        }
+      });
+
+    res.json({ success: true, uid: uidKey });
+  } catch (error: any) {
+    console.error('Error saving user:', error);
+    res.status(500).json({ error: 'Failed to save user' });
+  }
+});
+
+app.post('/api/users/sync', async (req, res) => {
+  try {
+    const { users: userList } = req.body;
+    if (Array.isArray(userList)) {
+      for (const u of userList) {
+        const uidKey = u.id || u.uid || `usr-${Date.now()}`;
+        await db.insert(schema.users)
+          .values({
+            uid: uidKey,
+            email: u.email || `${u.username}@tamannamotors.com`,
+            password: u.password || '',
+            name: u.name || u.username,
+            username: u.username,
+            role: u.role || 'cashier',
+            phone: u.phone || null,
+            businessLocation: u.businessLocation || 'Hazigonj Branch',
+            status: u.status || 'Active',
+            lastLogin: u.lastLogin || new Date().toISOString(),
+          })
+          .onConflictDoUpdate({
+            target: schema.users.uid,
+            set: {
+              email: u.email || `${u.username}@tamannamotors.com`,
+              password: u.password || '',
+              name: u.name || u.username,
+              username: u.username,
+              role: u.role || 'cashier',
+              phone: u.phone || null,
+              businessLocation: u.businessLocation || 'Hazigonj Branch',
+              status: u.status || 'Active',
+              lastLogin: u.lastLogin || new Date().toISOString(),
+            }
+          });
+      }
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error syncing users:', error);
+    res.status(500).json({ error: 'Failed to sync users' });
+  }
+});
+
+app.delete('/api/users/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    await db.delete(schema.users).where(eq(schema.users.uid, uid));
+    res.json({ success: true, uid });
+  } catch (error: any) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+app.delete('/api/purchases/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(schema.purchases).where(eq(schema.purchases.id, id));
+    res.json({ success: true, id });
+  } catch (error: any) {
+    console.error('Error deleting purchase:', error);
+    res.status(500).json({ error: 'Failed to delete purchase' });
+  }
+});
+
+app.delete('/api/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.delete(schema.expenses).where(eq(schema.expenses.id, id));
+    res.json({ success: true, id });
+  } catch (error: any) {
+    console.error('Error deleting expense:', error);
+    res.status(500).json({ error: 'Failed to delete expense' });
   }
 });
 

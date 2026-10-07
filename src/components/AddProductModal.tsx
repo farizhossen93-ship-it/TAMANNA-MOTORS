@@ -11,11 +11,16 @@ import {
   CheckCircle2,
   Sparkles,
   AlertTriangle,
-  RefreshCw
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  Trash2,
+  Cloud
 } from 'lucide-react';
 import { Product } from '../types';
 import { TAMANNA_BARCODE_CATALOG, BarcodeProductPreset } from '../data/barcodeCatalog';
 import { Language, TRANSLATIONS } from '../i18n/translations';
+import { uploadToSupabaseStorage } from '../lib/supabaseStorage';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -45,6 +50,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [alertQty, setAlertQty] = useState(initialProduct?.alertQuantity.toString() || '5');
   const [imageUrl, setImageUrl] = useState(initialProduct?.imageUrl || '');
 
+  // Uploading state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+
   // Barcode Scanner & Camera state
   const [barcodeInput, setBarcodeInput] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -52,6 +61,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [autoFillSuccess, setAutoFillSuccess] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -137,14 +147,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
-  // Barcode detection loop using BarcodeDetector API if available, or visual detection simulation
   const startBarcodeDetectionLoop = () => {
     const checkBarcode = async () => {
       if (!videoRef.current || !streamRef.current || !isCameraActive) return;
 
       try {
         if ('BarcodeDetector' in window) {
-          // Native browser BarcodeDetector API (Chrome 83+)
           const BarcodeDetectorClass = (window as any).BarcodeDetector;
           const barcodeDetector = new BarcodeDetectorClass({
             formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'qr_code', 'upc_a']
@@ -167,13 +175,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     animationFrameRef.current = requestAnimationFrame(checkBarcode);
   };
 
-  // Auto-fill logic when a barcode is scanned or entered
   const handleBarcodeScanned = (scannedCode: string) => {
     setBarcodeInput(scannedCode);
     setDetectedBarcode(scannedCode);
     stopCamera();
 
-    // Look up in TAMANNA MOTORS parts database catalog
     const matched = TAMANNA_BARCODE_CATALOG.find(
       p => p.barcode === scannedCode || p.sku.toLowerCase() === scannedCode.toLowerCase()
     );
@@ -190,7 +196,6 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setAutoFillSuccess(true);
       setTimeout(() => setAutoFillSuccess(false), 4000);
     } else {
-      // Auto-generate SKU from scanned barcode if not in preset
       setSku(`SKU-${scannedCode.slice(-6)}`);
       setName(`Auto-Scanned Part (${scannedCode})`);
       setAutoFillSuccess(true);
@@ -200,6 +205,62 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
   const handleApplyPreset = (preset: BarcodeProductPreset) => {
     handleBarcodeScanned(preset.barcode);
+  };
+
+  // Image Upload handler for Supabase Storage
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadMessage(lang === 'bn' ? 'Supabase Storage-এ আপলোড হচ্ছে...' : 'Uploading to Supabase Storage...');
+
+    try {
+      const customPrefix = sku.trim() ? `prod_${sku.trim().toLowerCase()}` : `prod_${Date.now()}`;
+      const result = await uploadToSupabaseStorage(file, 'products', customPrefix);
+      if (result.url) {
+        setImageUrl(result.url);
+        setUploadMessage(
+          lang === 'bn' 
+            ? 'Supabase Storage-এ সফলভাবে আপলোড সম্পন্ন হয়েছে!' 
+            : 'Uploaded successfully to Supabase Storage!'
+        );
+        setTimeout(() => setUploadMessage(null), 3000);
+      } else {
+        setUploadMessage(lang === 'bn' ? 'আপলোড ব্যর্থ হয়েছে' : 'Upload failed');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setUploadMessage(err?.message || 'Error uploading file');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Capture snapshot from active camera and upload to Supabase Storage
+  const handleCaptureSnapshot = async () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth || 640;
+    canvas.height = videoRef.current.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      setIsUploading(true);
+      setUploadMessage(lang === 'bn' ? 'ক্যামেরা ছবি Supabase Storage-এ সেভ হচ্ছে...' : 'Saving snapshot to Supabase Storage...');
+      const result = await uploadToSupabaseStorage(blob, 'products', `snap_${Date.now()}`);
+      if (result.url) {
+        setImageUrl(result.url);
+        stopCamera();
+        setUploadMessage(lang === 'bn' ? 'ছবি সফলভাবে সংযুক্ত হয়েছে!' : 'Snapshot saved to Supabase!');
+        setTimeout(() => setUploadMessage(null), 3000);
+      }
+      setIsUploading(false);
+    }, 'image/jpeg', 0.85);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -233,7 +294,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in overflow-y-auto">
       <div 
-        className="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 shadow-2xl my-8 transition-colors"
+        className="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 shadow-2xl my-8 transition-colors max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -247,7 +308,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 {initialProduct ? t.productModal.titleEdit : t.productModal.titleAdd}
               </h3>
               <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                TAMANNA MOTORS · {lang === 'bn' ? 'মোটর পার্টস ইনভেন্টরি' : 'Motor Spare Parts Inventory'}
+                TAMANNA MOTORS · {lang === 'bn' ? 'মোটর পার্টস ইনভেন্টরি ও Supabase ক্লাউড স্টোরেজ' : 'Spare Parts Inventory & Supabase Storage'}
               </p>
             </div>
           </div>
@@ -262,7 +323,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           </button>
         </div>
 
-        {/* 1. Barcode Scanner & Camera auto-fill section */}
+        {/* 1. Barcode Scanner & Camera section */}
         <div className="mt-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -272,30 +333,42 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={isCameraActive ? stopCamera : startCamera}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors ${
-                isCameraActive
-                  ? 'bg-rose-600 text-white hover:bg-rose-700'
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
-              }`}
-            >
-              {isCameraActive ? (
-                <>
-                  <CameraOff className="h-3.5 w-3.5" />
-                  <span>{t.productModal.stopCamera}</span>
-                </>
-              ) : (
-                <>
-                  <Camera className="h-3.5 w-3.5" />
-                  <span>{t.productModal.scanWithCamera}</span>
-                </>
+            <div className="flex items-center gap-2">
+              {isCameraActive && (
+                <button
+                  type="button"
+                  onClick={handleCaptureSnapshot}
+                  className="flex items-center gap-1 rounded-lg bg-blue-600 text-white px-2.5 py-1.5 text-xs font-semibold hover:bg-blue-700 shadow-xs"
+                >
+                  <Camera className="h-3 w-3" />
+                  <span>{lang === 'bn' ? 'ছবি তুলুন' : 'Snapshot'}</span>
+                </button>
               )}
-            </button>
+              <button
+                type="button"
+                onClick={isCameraActive ? stopCamera : startCamera}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-xs transition-colors ${
+                  isCameraActive
+                    ? 'bg-rose-600 text-white hover:bg-rose-700'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                }`}
+              >
+                {isCameraActive ? (
+                  <>
+                    <CameraOff className="h-3.5 w-3.5" />
+                    <span>{t.productModal.stopCamera}</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="h-3.5 w-3.5" />
+                    <span>{t.productModal.scanWithCamera}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Live Camera Viewport with laser reticle */}
+          {/* Live Camera Viewport */}
           {isCameraActive && (
             <div className="relative rounded-lg overflow-hidden bg-black aspect-video flex items-center justify-center border-2 border-emerald-500 shadow-inner">
               <video
@@ -305,22 +378,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 autoPlay
                 className="w-full h-full object-cover"
               />
-
-              {/* Scanning Target Reticle & Laser animation */}
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <div className="relative w-48 h-24 border-2 border-emerald-400/80 rounded-md">
                   <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-emerald-300" />
                   <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-emerald-300" />
                   <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-emerald-300" />
                   <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-emerald-300" />
-
-                  {/* Animated laser line */}
                   <div className="w-full h-0.5 bg-rose-500/90 shadow-[0_0_8px_#f43f5e] animate-pulse my-10" />
                 </div>
-              </div>
-
-              <div className="absolute bottom-2 left-2 right-2 text-center bg-black/60 backdrop-blur-xs py-1 px-2 rounded text-[11px] text-white font-mono">
-                {t.productModal.scanningCamera}
               </div>
             </div>
           )}
@@ -330,16 +395,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
               <div>
                 <p className="font-semibold">{cameraError}</p>
-                <p className="text-[11px] opacity-90 mt-0.5">
-                  {lang === 'bn' 
-                    ? 'নিচের ইনপুট বক্সে কোড লিখে বা ক্যাটালগ প্রিসেট সিলেক্ট করুন।' 
-                    : 'You can type into the barcode input below or select a catalog preset.'}
-                </p>
               </div>
             </div>
           )}
 
-          {/* Barcode input field with lookup button */}
+          {/* Barcode input field */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <input
@@ -367,19 +427,18 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             </button>
           </div>
 
-          {/* Quick Auto-Fill Preset Barcodes for Tamanna Motors Parts */}
+          {/* Quick Presets */}
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-300">
-              <span className="font-semibold">{t.productModal.quickPresets} (Tamanna Motors Catalog):</span>
+              <span className="font-semibold">{t.productModal.quickPresets}:</span>
             </div>
-            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto pr-1">
               {TAMANNA_BARCODE_CATALOG.slice(0, 6).map((preset) => (
                 <button
                   key={preset.barcode}
                   type="button"
                   onClick={() => handleApplyPreset(preset)}
                   className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:border-emerald-400 transition-colors text-left"
-                  title={`${preset.nameEn} (Barcode: ${preset.barcode})`}
                 >
                   <span className="font-mono font-semibold text-emerald-800 dark:text-emerald-400">
                     {preset.sku}
@@ -389,16 +448,84 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               ))}
             </div>
           </div>
-
-          {autoFillSuccess && (
-            <div className="flex items-center gap-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-3 py-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300 animate-in fade-in">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <span>{t.productModal.autoFillSuccess}</span>
-            </div>
-          )}
         </div>
 
-        {/* 2. Main Product Information Form */}
+        {/* 2. Supabase Storage Image Upload Section */}
+        <div className="mt-4 rounded-xl border border-sky-200 dark:border-sky-900/50 bg-sky-50/40 dark:bg-sky-950/20 p-3.5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5">
+              <Cloud className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'পণ্যের ছবি (Supabase Storage)' : 'Product Picture (Supabase Storage)'}
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-sky-700 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/60 px-2 py-0.5 rounded">
+              bucket: tamanna-media/products
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Thumbnail Preview */}
+            <div className="relative h-16 w-16 shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
+              {imageUrl ? (
+                <img src={imageUrl} alt="Product" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="h-6 w-6 text-slate-400" />
+              )}
+              {imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setImageUrl('')}
+                  title="Remove image"
+                  className="absolute top-0.5 right-0.5 rounded-full bg-rose-600 p-0.5 text-white hover:bg-rose-700"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Upload Button & Direct URL */}
+            <div className="flex-1 space-y-1.5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageFileChange}
+                className="hidden"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 text-xs font-semibold shadow-xs disabled:opacity-50 transition-colors"
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="h-3.5 w-3.5" />
+                  )}
+                  <span>{isUploading ? (lang === 'bn' ? 'আপলোড হচ্ছে...' : 'Uploading...') : (lang === 'bn' ? 'ছবি আপলোড করুন' : 'Upload Image')}</span>
+                </button>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder={lang === 'bn' ? 'অথবা ছবির ডিরেক্ট লিঙ্ক দিন...' : 'Or enter direct image URL...'}
+                  className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+                />
+              </div>
+
+              {uploadMessage && (
+                <p className="text-[11px] font-medium text-sky-700 dark:text-sky-300 animate-in fade-in">
+                  {uploadMessage}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Main Product Information Form */}
         <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
           <div>
             <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">

@@ -24,7 +24,7 @@ import {
   Database
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
-import { BusinessSettings } from '../types';
+import { BusinessSettings, UserRole } from '../types';
 
 interface SidebarProps {
   currentRoute: string;
@@ -34,6 +34,7 @@ interface SidebarProps {
   onToggle?: () => void;
   lang: Language;
   businessSettings?: BusinessSettings;
+  userRole?: UserRole;
 }
 
 interface SubMenuItem {
@@ -57,7 +58,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   onToggle,
   lang,
-  businessSettings
+  businessSettings,
+  userRole = 'super_admin'
 }) => {
   const t = TRANSLATIONS[lang];
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,12 +120,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'synced-dues',
       labelKey: lang === 'bn' ? 'বকেয়া ও দেনা-পাওনা' : 'Synced Dues Ledger',
       icon: <CreditCard className="h-4 w-4 shrink-0 text-rose-500" />,
-      category: 'core'
-    },
-    {
-      id: 'cloud-database',
-      labelKey: lang === 'bn' ? 'ক্লাউড ডেটাবেজ (Cloud SQL)' : 'Cloud SQL Database',
-      icon: <Database className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />,
       category: 'core'
     },
     {
@@ -217,16 +213,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   ];
 
-  // Filter items by search query if user types
+  // Filter items by userRole and search query
   const filteredMenuItems = useMemo(() => {
-    if (!searchQuery.trim()) return menuArchitecture;
+    let items = menuArchitecture;
+
+    if (userRole === 'cashier') {
+      items = menuArchitecture.filter(i => ['home', 'sales', 'products'].includes(i.id));
+    } else if (userRole === 'manager') {
+      items = menuArchitecture.filter(i => ['home', 'products', 'purchase', 'stock-transfer', 'contact', 'sales', 'expenses'].includes(i.id));
+    } else if (userRole === 'admin') {
+      items = menuArchitecture.filter(i => i.id !== 'user-management');
+    }
+
+    if (!searchQuery.trim()) return items;
     const q = searchQuery.toLowerCase();
-    return menuArchitecture.filter((item) => {
+    return items.filter((item) => {
       const parentMatches = item.labelKey.toLowerCase().includes(q);
       const childMatches = item.children?.some(c => c.labelKey.toLowerCase().includes(q));
       return parentMatches || childMatches;
     });
-  }, [searchQuery, menuArchitecture]);
+  }, [searchQuery, menuArchitecture, userRole]);
 
   const isChildActive = (item: MenuItem): boolean => {
     if (!item.children) return false;

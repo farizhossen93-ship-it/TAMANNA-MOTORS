@@ -131,6 +131,23 @@ export const Header: React.FC<HeaderProps> = ({
           <Menu className="h-5 w-5" />
         </button>
 
+        <button
+          onClick={() => onNavigate('home')}
+          className="hidden md:flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer"
+          title="Terminal Dashboard"
+        >
+          <Store className="h-3.5 w-3.5 text-emerald-600" />
+          <span>
+            {currentUser?.role === 'super_admin'
+              ? (lang === 'bn' ? '⚡ সুপার অ্যাডমিন ড্যাশবোর্ড' : '⚡ Super Admin Dashboard')
+              : currentUser?.role === 'cashier'
+              ? (lang === 'bn' ? '⚡ ক্যাশিয়ার কাউন্টার' : '⚡ Cashier Terminal')
+              : currentUser?.role === 'manager'
+              ? (lang === 'bn' ? '⚡ ম্যানেজার প্যানেল' : '⚡ Manager Panel')
+              : (lang === 'bn' ? '⚡ তামান্না মোটরস ইআরপি' : '⚡ Tamanna Motors ERP')}
+          </span>
+        </button>
+
         {businessSettings?.logoUrl ? (
           <img
             src={businessSettings.logoUrl}
