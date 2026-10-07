@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Motorcycle spare part or lubricant product item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "category": { "type": "string" },
+        "businessLocation": { "type": "string" },
+        "unitPurchasePrice": { "type": "number" },
+        "sellingPrice": { "type": "number" },
+        "currentStock": { "type": "number" },
+        "alertQuantity": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "sku", "sellingPrice"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Point of sale invoice record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNo": { "type": "string" },
+        "type": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "businessLocation": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "invoiceDue": { "type": "number" },
+        "saleDate": { "type": "string" },
+        "itemsCount": { "type": "number" }
+      },
+      "required": ["id", "invoiceNo", "totalAmount"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "Customer or supplier record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "name": { "type": "string" },
+        "businessName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "balance": { "type": "number" }
+      },
+      "required": ["id", "name", "type"]
+    },
+    "AuthUser": {
+      "title": "AuthUser",
+      "description": "Tamanna Motors ERP staff member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "username", "role"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Motorcycle parts catalog items"
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "POS receipts and invoices"
+    },
+    "/contacts/{contactId}": {
+      "schema": "Contact",
+      "description": "Customers and suppliers ledger"
+    },
+    "/users/{userId}": {
+      "schema": "AuthUser",
+      "description": "Registered staff users"
+    }
+  }
+}

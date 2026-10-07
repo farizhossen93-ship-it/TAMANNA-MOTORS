@@ -50,6 +50,7 @@ import { UserManagementView } from './components/UserManagementView';
 import { SyncedDuesView } from './components/SyncedDuesView';
 import { DatabaseControlView } from './components/DatabaseControlView';
 import { SupabaseSync } from './data/supabaseSync';
+import { FirestoreSync } from './data/firestoreSync';
 import { ReceiptModal } from './components/ReceiptModal';
 import { LoginView } from './components/LoginView';
 import { InvoiceScanModal } from './components/InvoiceScanModal';
@@ -198,11 +199,49 @@ export default function App() {
           if (custs.length > 0) setCustomers(custs);
           if (sups.length > 0) setSuppliers(sups);
         }
+        const [fsProds, fsSales, fsContacts, fsUsers] = await Promise.all([
+          FirestoreSync.fetchProducts(),
+          FirestoreSync.fetchSales(),
+          FirestoreSync.fetchContacts(),
+          FirestoreSync.fetchUsers(),
+        ]);
+
+        if (fsProds && fsProds.length > 0) setProducts(fsProds);
+        if (fsSales && fsSales.length > 0) setSales(fsSales);
+        if (fsContacts && fsContacts.length > 0) {
+          setCustomers(fsContacts.filter(c => c.type === 'customer'));
+          setSuppliers(fsContacts.filter(c => c.type === 'supplier'));
+        }
+        if (fsUsers && fsUsers.length > 0) setStaffUsers(fsUsers);
       } catch (e) {
         console.log("Offline mode or backend loading fallback", e);
       }
     };
     fetchBackendData();
+
+    // Subscribe to Firebase Firestore real-time updates
+    const unsubProds = FirestoreSync.subscribeProducts((prods) => {
+      if (prods.length > 0) setProducts(prods);
+    });
+    const unsubSales = FirestoreSync.subscribeSales((sls) => {
+      if (sls.length > 0) setSales(sls);
+    });
+    const unsubContacts = FirestoreSync.subscribeContacts((cnts) => {
+      if (cnts.length > 0) {
+        setCustomers(cnts.filter(c => c.type === 'customer'));
+        setSuppliers(cnts.filter(c => c.type === 'supplier'));
+      }
+    });
+    const unsubUsers = FirestoreSync.subscribeUsers((usrs) => {
+      if (usrs.length > 0) setStaffUsers(usrs);
+    });
+
+    return () => {
+      unsubProds();
+      unsubSales();
+      unsubContacts();
+      unsubUsers();
+    };
   }, []);
 
   // Authentication & Staff User state
@@ -498,6 +537,7 @@ export default function App() {
         body: JSON.stringify({ products: [newProd] })
       }).catch(console.error);
       SupabaseSync.upsertProduct(newProd);
+      FirestoreSync.upsertProduct(newProd);
       setEditingProduct(null);
       showSyncNotice(lang === 'bn' ? `মোটর পার্টস '${newProd.name}' সফলভাবে সম্পাদিত ও ক্লাউডে সিঙ্ক হয়েছে।` : `Product '${newProd.name}' edited and synced.`);
     } else {
@@ -510,6 +550,7 @@ export default function App() {
         body: JSON.stringify({ products: [newProd] })
       }).catch(console.error);
       SupabaseSync.upsertProduct(newProd);
+      FirestoreSync.upsertProduct(newProd);
       showSyncNotice(lang === 'bn' ? `নতুন পার্টস '${newProd.name}' যুক্ত ও ক্লাউড ডেটাবেজে সিঙ্ক হয়েছে।` : `New product '${newProd.name}' added and synced.`);
     }
   };
@@ -525,6 +566,7 @@ export default function App() {
     DatabaseStorage.saveProducts(updated);
     fetch(`/api/products/${prod.id}`, { method: 'DELETE' }).catch(console.error);
     SupabaseSync.deleteProduct(prod.id);
+    FirestoreSync.deleteProduct(prod.id);
     showSyncNotice(lang === 'bn' ? `'${prod.name}' মুছে ফেলা হয়েছে এবং ডাটাবেজ সিঙ্ক হয়েছে।` : `'${prod.name}' deleted and synced.`);
   };
 
@@ -691,8 +733,10 @@ export default function App() {
       body: JSON.stringify(newSale)
     }).catch(console.error);
     SupabaseSync.upsertSale(newSale);
+    FirestoreSync.upsertSale(newSale);
     for (const p of updatedProducts) {
       SupabaseSync.upsertProduct(p);
+      FirestoreSync.upsertProduct(p);
     }
     showSyncNotice(lang === 'bn' ? `বিক্রয় চালান '${newSale.invoiceNo}' সফলভাবে সম্পন্ন ও ক্লাউড সিঙ্ক হয়েছে।` : `Sale invoice '${newSale.invoiceNo}' completed and synced.`);
   };
@@ -708,6 +752,7 @@ export default function App() {
     DatabaseStorage.saveSales(updated);
     fetch(`/api/sales/${sale.id}`, { method: 'DELETE' }).catch(console.error);
     SupabaseSync.deleteSale(sale.id);
+    FirestoreSync.deleteSale(sale.id);
     showSyncNotice(lang === 'bn' ? `চালান '${sale.invoiceNo}' মুছে ফেলা হয়েছে এবং ডাটাবেজ সিঙ্ক হয়েছে।` : `Invoice '${sale.invoiceNo}' deleted and synced.`);
   };
 
