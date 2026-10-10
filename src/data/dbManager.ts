@@ -14,6 +14,19 @@ export const DEFAULT_STAFF_USERS: AuthUser[] = [
     status: 'Active',
     emailVerified: true,
     lastLogin: 'Today'
+  },
+  {
+    id: 'usr-jubo-default',
+    name: 'Jubo',
+    username: 'jubo',
+    email: 'jubo.48a@gmail.com',
+    password: 'password123',
+    phone: '01800000000',
+    role: 'super_admin',
+    businessLocation: 'Hazigonj Branch',
+    status: 'Active',
+    emailVerified: true,
+    lastLogin: 'Never'
   }
 ];
 
@@ -334,11 +347,32 @@ export const DatabaseStorage = {
   loadStaffUsers(): AuthUser[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.STAFF_USERS);
-      if (!data) return DEFAULT_STAFF_USERS;
-      const parsed: AuthUser[] = JSON.parse(data);
-      if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_STAFF_USERS;
-      const valid = parsed.filter(u => u && u.username && u.id);
-      if (!valid.some(u => u.role === 'super_admin')) {
+      let users = data ? JSON.parse(data) : DEFAULT_STAFF_USERS;
+      if (!Array.isArray(users) || users.length === 0) users = DEFAULT_STAFF_USERS;
+
+      // Ensure jubo.48a@gmail.com is present and active
+      let foundJubo = users.find((u: any) => u && (u.email?.toLowerCase() === 'jubo.48a@gmail.com' || u.username?.toLowerCase() === 'jubo'));
+      if (!foundJubo) {
+        users.push({
+          id: 'usr-jubo-default',
+          name: 'Jubo',
+          username: 'jubo',
+          email: 'jubo.48a@gmail.com',
+          password: 'password123',
+          phone: '01800000000',
+          role: 'super_admin',
+          businessLocation: 'Hazigonj Branch',
+          status: 'Active',
+          emailVerified: true,
+          lastLogin: 'Never'
+        });
+      } else {
+        foundJubo.status = 'Active';
+        foundJubo.emailVerified = true;
+      }
+
+      const valid = users.filter((u: any) => u && u.username && u.id);
+      if (!valid.some((u: any) => u.role === 'super_admin')) {
         return [...DEFAULT_STAFF_USERS, ...valid];
       }
       return valid;

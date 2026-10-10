@@ -88,6 +88,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       return;
     }
 
+    if ((role === 'super_admin' || editingUser?.role === 'super_admin') && status === 'Suspended') {
+      showNotification(
+        lang === 'bn'
+          ? 'সুপার অ্যাডমিন অ্যাকাউন্ট স্থগিত করা যাবে না!'
+          : 'Super Admin account cannot be suspended!'
+      );
+      return;
+    }
+
     if (editingUser) {
       // Update existing user
       const updatedList = users.map(u => {
@@ -151,6 +160,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   };
 
   const handleToggleStatus = (targetUser: AuthUser) => {
+    if (targetUser.role === 'super_admin') {
+      showNotification(
+        lang === 'bn'
+          ? 'সুপার অ্যাডমিন অ্যাকাউন্ট স্থগিত করা যাবে না!'
+          : 'Super Admin account cannot be suspended!'
+      );
+      return;
+    }
+
     let updatedStatus: 'Active' | 'Suspended' | 'Pending Approval' = 'Active';
     if (targetUser.status === 'Active') {
       updatedStatus = 'Suspended';
