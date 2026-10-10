@@ -6,7 +6,6 @@ import {
   ChevronDown, 
   Clock, 
   Store, 
-  Database,
   User, 
   Settings as SettingsIcon, 
   LogOut, 
@@ -18,6 +17,7 @@ import {
   Wrench,
   Crown,
   ShieldCheck,
+  Shield,
   Image,
   Sparkles,
   Plus,
@@ -119,155 +119,66 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 lg:px-6 shadow-xs select-none transition-colors">
-      {/* Left section: Toggle, Greeting & Branch */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-3 border-b border-white/20 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl px-3 sm:px-4 lg:px-6 shadow-md select-none transition-colors">
+      {/* Left section: Toggle, Logo & Greeting */}
+      <div className="flex items-center gap-2.5 min-w-0">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-2 focus-visible:outline-emerald-500"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all backdrop-blur-md cursor-pointer active:scale-95"
           title="Toggle Navigation Sidebar"
           aria-label="Toggle Navigation Sidebar"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <button
-          onClick={() => onNavigate('home')}
-          className="hidden md:flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition-colors cursor-pointer"
-          title="Terminal Dashboard"
-        >
-          <Store className="h-3.5 w-3.5 text-emerald-600" />
-          <span>
-            {currentUser?.role === 'super_admin'
-              ? (lang === 'bn' ? '⚡ সুপার অ্যাডমিন ড্যাশবোর্ড' : '⚡ Super Admin Dashboard')
-              : currentUser?.role === 'cashier'
-              ? (lang === 'bn' ? '⚡ ক্যাশিয়ার কাউন্টার' : '⚡ Cashier Terminal')
-              : currentUser?.role === 'manager'
-              ? (lang === 'bn' ? '⚡ ম্যানেজার প্যানেল' : '⚡ Manager Panel')
-              : (lang === 'bn' ? '⚡ তামান্না মোটরস ইআরপি' : '⚡ Tamanna Motors ERP')}
-          </span>
-        </button>
-
         {businessSettings?.logoUrl ? (
           <img
             src={businessSettings.logoUrl}
             alt="Tamanna Motors Logo"
-            className="h-8 w-8 rounded-lg object-contain border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-0.5 shrink-0"
+            className="h-8 w-8 rounded-xl object-contain border border-white/20 dark:border-white/10 bg-white dark:bg-slate-800 p-0.5 shrink-0 shadow-xs"
           />
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-black text-xs shrink-0 shadow-xs">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white font-black text-xs shrink-0 shadow-xs ring-1 ring-white/20">
             TM
           </div>
         )}
 
-        <div className="hidden sm:block">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900 dark:text-white">
-              {t.welcome}, {currentUser?.name || (lang === 'bn' ? 'অ্যাডমিন' : 'Admin')}
+        <div className="hidden sm:flex items-center gap-2 min-w-0">
+          <span className="text-xs md:text-sm font-bold text-slate-900 dark:text-white truncate max-w-[130px] md:max-w-[180px]">
+            {t.welcome}, {currentUser?.name || (lang === 'bn' ? 'অ্যাডমিন' : 'Admin')}
+          </span>
+
+          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0">
+            <Shield className="h-2.5 w-2.5" />
+            <span>
+              {currentUser?.role === 'super_admin'
+                ? t.superAdmin
+                : currentUser?.role === 'admin'
+                ? t.admin
+                : currentUser?.role === 'manager'
+                ? (lang === 'bn' ? 'ম্যানেজার' : 'Manager')
+                : (lang === 'bn' ? 'ক্যাশিয়ার' : 'Cashier')}
             </span>
+          </div>
+        </div>
 
-            {/* Super Admin & User Role Switcher */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setRoleDropdownOpen(!roleDropdownOpen);
-                  setBranchDropdownOpen(false);
-                  setProfileDropdownOpen(false);
-                }}
-                className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-black tracking-wide transition-all shadow-xs ${
-                  userRole === 'super_admin'
-                    ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 border border-amber-300 hover:brightness-105'
-                    : userRole === 'admin'
-                    ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 border border-blue-300'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
-                }`}
-                title="Click to Switch Role (Super Admin / Admin / Cashier)"
-              >
-                {userRole === 'super_admin' && <Crown className="h-3 w-3 fill-slate-950" />}
-                <span>
-                  {userRole === 'super_admin'
-                    ? t.superAdmin
-                    : userRole === 'admin'
-                    ? t.admin
-                    : (lang === 'bn' ? 'ক্যাশিয়ার' : 'Cashier')}
-                </span>
-                <ChevronDown className="h-2.5 w-2.5 opacity-70" />
-              </button>
-
-              {roleDropdownOpen && (
-                <div className="absolute left-0 mt-1.5 w-72 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95">
-                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                    {t.switchRole}
-                  </div>
-                  <button
-                    onClick={() => {
-                      onToggleUserRole?.('super_admin');
-                      setRoleDropdownOpen(false);
-                    }}
-                    className="flex w-full items-start gap-2.5 px-3 py-2 text-xs hover:bg-amber-50 dark:hover:bg-amber-950/40 text-left transition-colors"
-                  >
-                    <Crown className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                        <span>{t.superAdmin}</span>
-                        {userRole === 'super_admin' && <Check className="h-3.5 w-3.5 text-emerald-600" />}
-                      </div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">{t.superAdminPrivilege}</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onToggleUserRole?.('admin');
-                      setRoleDropdownOpen(false);
-                    }}
-                    className="flex w-full items-start gap-2.5 px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
-                  >
-                    <ShieldCheck className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <span>{t.admin}</span>
-                        {userRole === 'admin' && <Check className="h-3.5 w-3.5 text-emerald-600" />}
-                      </div>
-                      <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{lang === 'bn' ? 'দৈনন্দিন স্টোর ও ইনভেন্টরি ম্যানেজমেন্ট' : 'Standard daily store management'}</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      onToggleUserRole?.('cashier');
-                      setRoleDropdownOpen(false);
-                    }}
-                    className="flex w-full items-start gap-2.5 px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
-                  >
-                    <User className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <span>{lang === 'bn' ? 'ক্যাশিয়ার / স্টাফ' : 'Cashier / Staff'}</span>
-                        {userRole === 'cashier' && <Check className="h-3.5 w-3.5 text-emerald-600" />}
-                      </div>
-                      <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{lang === 'bn' ? 'শুধুমাত্র পিওএস বিক্রয় (মুছে ফেলা সীমাবদ্ধ)' : 'POS sales and terminal view only'}</p>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Super Admin Quick 'Put New Entry' Button & Menu */}
-            {userRole === 'super_admin' && onPutNewEntry && (
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setQuickEntryDropdownOpen(!quickEntryDropdownOpen);
-                    setRoleDropdownOpen(false);
-                    setBranchDropdownOpen(false);
-                    setProfileDropdownOpen(false);
-                  }}
-                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-2.5 py-1 text-[11px] font-bold shadow-xs transition-all active:scale-98"
-                  title="Super Admin: Put new entry into database with instant sync"
-                >
-                  <Plus className="h-3 w-3 stroke-[3]" />
-                  <span>{lang === 'bn' ? 'নতুন এন্ট্রি দিন' : 'Put New Entry'}</span>
-                  <ChevronDown className="h-2.5 w-2.5 opacity-80" />
-                </button>
+        {/* Super Admin Quick 'Put New Entry' Button & Menu */}
+        {userRole === 'super_admin' && onPutNewEntry && (
+          <div className="relative ml-1">
+            <button
+              onClick={() => {
+                setQuickEntryDropdownOpen(!quickEntryDropdownOpen);
+                setRoleDropdownOpen(false);
+                setBranchDropdownOpen(false);
+                setProfileDropdownOpen(false);
+              }}
+              className="flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-2.5 py-1 text-xs font-bold shadow-xs transition-all active:scale-98 shrink-0 cursor-pointer"
+              title="Super Admin: Put new entry into database with instant sync"
+            >
+              <Plus className="h-3 w-3 stroke-[3]" />
+              <span className="hidden xs:inline">{lang === 'bn' ? 'নতুন এন্ট্রি' : 'Put Entry'}</span>
+              <ChevronDown className="h-2.5 w-2.5 opacity-80" />
+            </button>
 
                 {quickEntryDropdownOpen && (
                   <div className="absolute left-0 mt-1.5 w-64 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 text-xs">
@@ -378,26 +289,18 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
-            {/* Synced Database Indicator */}
-            <div className="hidden lg:flex items-center gap-1 text-[10px] font-bold text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-full" title="All operations synced with TAMANNA MOTORS Local Database">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>{lang === 'bn' ? 'ডাটাবেজ সিঙ্কড' : 'DB Synced'}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Location selector */}
-        <div className="relative ml-1 hidden md:block">
+        <div className="relative ml-1 hidden xl:block">
           <button
             onClick={() => {
               setBranchDropdownOpen(!branchDropdownOpen);
               setProfileDropdownOpen(false);
               setNotificationOpen(false);
             }}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-2 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <Store className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span className="truncate max-w-[150px]">
+            <span className="truncate max-w-[130px]">
               {branches.find(b => b.id === currentBranch)?.[lang === 'bn' ? 'labelBn' : 'labelEn'] || currentBranch}
             </span>
             <ChevronDown className="h-3 w-3 text-slate-400" />
@@ -465,21 +368,21 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Theme Toggle (Dark / Light) */}
         <button
           onClick={onToggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
           title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
           aria-label="Toggle Theme"
         >
           {theme === 'dark' ? (
             <Sun className="h-4 w-4 text-amber-400" />
           ) : (
-            <Moon className="h-4 w-4 text-slate-600" />
+            <Moon className="h-4 w-4 text-slate-600 dark:text-slate-300" />
           )}
         </button>
 
-        {/* Global Quick Search Button (Ctrl+S) */}
+        {/* Global Quick Search Button (Ctrl+S) - hidden on small mobile, visible on sm+ */}
         <button
           onClick={onOpenSearch}
-          className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-emerald-500/50 transition-colors shadow-2xs cursor-pointer"
+          className="hidden sm:flex items-center gap-2 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 px-2.5 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-emerald-500/50 transition-all backdrop-blur-md shadow-2xs cursor-pointer active:scale-95"
           title="Global Search & Commands (Ctrl+S)"
         >
           <Search className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -489,48 +392,49 @@ export const Header: React.FC<HeaderProps> = ({
           </kbd>
         </button>
 
-        {/* Keyboard Shortcuts Help Button */}
+        {/* Keyboard Shortcuts Help Button - hidden on mobile/tablet to avoid overflow */}
         <button
           onClick={onOpenShortcutsHelp}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          className="hidden lg:flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
           title="Keyboard Shortcuts (Ctrl+/)"
           aria-label="Keyboard Shortcuts"
         >
           <Keyboard className="h-4 w-4" />
         </button>
 
-        {/* Calculator Button */}
+        {/* Calculator Button - hidden on mobile, visible on md+ */}
         <button
           onClick={onOpenCalculator}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          className="hidden md:flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
           title="Calculator (Alt+C)"
           aria-label="Open Calculator"
         >
           <Calculator className="h-4 w-4" />
         </button>
 
-        {/* Invoice QR Scanner Button */}
+        {/* Invoice QR Scanner Button - hidden on small mobile, visible on md+ */}
         <button
           onClick={onOpenInvoiceScanner}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors whitespace-nowrap cursor-pointer shadow-xs"
+          className="hidden md:flex items-center gap-1.5 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 px-2.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all backdrop-blur-md whitespace-nowrap cursor-pointer shadow-xs active:scale-95"
           title={lang === 'bn' ? 'চালান কিউআর স্ক্যান ও যাচাই (Ctrl+I)' : 'Scan & Verify Invoice QR (Ctrl+I)'}
         >
           <QrCode className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          <span className="hidden md:inline">{lang === 'bn' ? 'চালান স্ক্যান' : 'Scan Invoice'}</span>
+          <span className="hidden lg:inline">{lang === 'bn' ? 'চালান স্ক্যান' : 'Scan Invoice'}</span>
           <kbd className="hidden xl:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600">
             Ctrl+I
           </kbd>
         </button>
 
-        {/* POS Shortcut Button */}
+        {/* POS Shortcut Button - always accessible, responsive sizing */}
         <button
           onClick={onOpenPos}
-          className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:bg-emerald-800 transition-colors whitespace-nowrap cursor-pointer"
+          className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-2.5 sm:px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all whitespace-nowrap cursor-pointer ring-1 ring-white/20"
           title="Launch POS Terminal (Ctrl+P)"
         >
-          <ShoppingCart className="h-4 w-4" />
-          <span>{t.openPos}</span>
-          <kbd className="hidden sm:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-800 text-emerald-100">
+          <ShoppingCart className="h-4 w-4 shrink-0" />
+          <span className="hidden xs:inline">{t.openPos}</span>
+          <span className="xs:hidden font-black">POS</span>
+          <kbd className="hidden sm:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-800/80 text-emerald-100">
             Ctrl+P
           </kbd>
         </button>
@@ -543,10 +447,10 @@ export const Header: React.FC<HeaderProps> = ({
               setBranchDropdownOpen(false);
               setNotificationOpen(false);
             }}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-1 pl-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 p-1 pl-1.5 sm:pl-2 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
             aria-label="User Menu"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-xs font-bold text-white overflow-hidden shadow-xs">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-700 text-xs font-bold text-white overflow-hidden shadow-xs ring-1 ring-white/20 shrink-0">
               {currentUser?.name ? currentUser.name.charAt(0) : (businessSettings?.logoUrl ? (
                 <img src={businessSettings.logoUrl} alt="Logo" className="h-full w-full object-cover" />
               ) : (
@@ -569,10 +473,10 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {profileDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-1.5 shadow-xl z-50 animate-in fade-in zoom-in-95">
-              <div className="border-b border-slate-100 dark:border-slate-800 px-4 py-2.5">
+            <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/20 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl py-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95">
+              <div className="border-b border-slate-100 dark:border-slate-800/80 px-4 py-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg overflow-hidden bg-emerald-600 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs">
+                  <div className="h-8 w-8 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs ring-1 ring-white/20">
                     {currentUser?.name ? currentUser.name.charAt(0) : 'TM'}
                   </div>
                   <div className="overflow-hidden">
@@ -586,7 +490,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
                 <div className="mt-2 flex items-center justify-between text-[10px]">
                   <span className="text-slate-500">{t.roleActive}:</span>
-                  <span className="font-extrabold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded uppercase">
+                  <span className="font-extrabold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-md uppercase border border-amber-300/30">
                     {(currentUser?.role || userRole) === 'super_admin' ? '👑 Super Admin' : (currentUser?.role || userRole)}
                   </span>
                 </div>
@@ -598,34 +502,36 @@ export const Header: React.FC<HeaderProps> = ({
                     onOpenInvoiceScanner?.();
                     setProfileDropdownOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-emerald-800 dark:text-emerald-400 font-semibold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-emerald-800 dark:text-emerald-400 font-semibold hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 cursor-pointer"
                 >
                   <QrCode className="h-3.5 w-3.5" />
                   <span>{lang === 'bn' ? 'চালান কিউআর কোড স্ক্যান' : 'Scan Invoice QR'}</span>
                 </button>
-                <button
-                  onClick={() => {
-                    onNavigate('user-management');
-                    setProfileDropdownOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  <User className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{t.nav.userManagement}</span>
-                </button>
+                {currentUser?.role === 'super_admin' && (
+                  <button
+                    onClick={() => {
+                      onNavigate('user-management');
+                      setProfileDropdownOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer font-medium"
+                  >
+                    <User className="h-3.5 w-3.5 text-slate-400" />
+                    <span>{t.nav.userManagement}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     onNavigate('settings-business');
                     setProfileDropdownOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  className="flex w-full items-center gap-2 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer"
                 >
                   <SettingsIcon className="h-3.5 w-3.5 text-slate-400" />
                   <span>{t.nav.businessSettings}</span>
                 </button>
               </div>
 
-              <div className="border-t border-slate-100 dark:border-slate-800 pt-1">
+              <div className="border-t border-slate-100 dark:border-slate-800/80 pt-1">
                 <button
                   onClick={() => {
                     setProfileDropdownOpen(false);

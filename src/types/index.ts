@@ -121,7 +121,9 @@ export interface AuthUser {
   role: UserRole;
   phone: string;
   businessLocation: string;
-  status: 'Active' | 'Suspended' | 'Pending Approval';
+  status: 'Active' | 'Suspended' | 'Pending Approval' | 'Pending Verification';
+  emailVerified?: boolean;
+  emailConfirmedAt?: string;
   avatar?: string;
   lastLogin?: string;
   createdAt?: string;

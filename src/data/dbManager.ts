@@ -1,7 +1,21 @@
 import { Product, Contact, CustomerGroup, Purchase, PurchaseReturn, Sale, SalesReturn, StockTransfer, Expense, BusinessSettings, InvoiceSettings, UserRole, AuthUser, DeleteRequest, AuditLog } from '../types';
 import { idbSet, idbGet, idbClearStore, STORES } from './indexedDB';
 
-export const DEFAULT_STAFF_USERS: AuthUser[] = [];
+export const DEFAULT_STAFF_USERS: AuthUser[] = [
+  {
+    id: 'usr-admin-default',
+    name: 'Super Admin (Owner)',
+    username: 'admin',
+    email: 'admin@tamannamotors.com',
+    password: 'admin123',
+    phone: '01804626477',
+    role: 'super_admin',
+    businessLocation: 'Hazigonj Branch',
+    status: 'Active',
+    emailVerified: true,
+    lastLogin: 'Today'
+  }
+];
 
 export const TAMANNA_BUSINESS_SETTINGS: BusinessSettings = {
   businessName: "TAMANNA MOTORS",
@@ -26,73 +40,7 @@ export const TAMANNA_INVOICE_SETTINGS: InvoiceSettings = {
   logoUrl: ""
 };
 
-export const INITIAL_TAMANNA_PRODUCTS: Product[] = [
-  {
-    id: "prod-1",
-    name: "Motul 7100 4T 10W-40 Synthetic 1L",
-    sku: "MOT-7100-10W40",
-    category: "Engine Oil & Lubricants",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 1250,
-    sellingPrice: 1550,
-    currentStock: 25,
-    alertQuantity: 5,
-    imageUrl: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&w=200&h=200&q=80",
-    createdAt: "2026-01-01"
-  },
-  {
-    id: "prod-2",
-    name: "NGK Laser Iridium Spark Plug (FZ/Gixxer)",
-    sku: "NGK-CR9EIX",
-    category: "Electrical & Ignition",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 450,
-    sellingPrice: 650,
-    currentStock: 40,
-    alertQuantity: 8,
-    imageUrl: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=200&h=200&q=80",
-    createdAt: "2026-01-02"
-  },
-  {
-    id: "prod-3",
-    name: "Yamaha FZ / R15 V3 Heavy Chain Sprocket Kit",
-    sku: "CHN-FZ-R15V3",
-    category: "Transmission & Drivetrain",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 2200,
-    sellingPrice: 2800,
-    currentStock: 12,
-    alertQuantity: 3,
-    imageUrl: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=200&h=200&q=80",
-    createdAt: "2026-01-03"
-  },
-  {
-    id: "prod-4",
-    name: "Bosch Maintenance-Free Battery 12V 5Ah",
-    sku: "BAT-BS-12V5AH",
-    category: "Batteries & Power",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 1800,
-    sellingPrice: 2350,
-    currentStock: 15,
-    alertQuantity: 4,
-    imageUrl: "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=200&h=200&q=80",
-    createdAt: "2026-01-04"
-  },
-  {
-    id: "prod-5",
-    name: "MRF Nylogrip Zapper Tubeless Tyre 100/80-17",
-    sku: "TYR-MRF-1008017",
-    category: "Tyres & Tubes",
-    businessLocation: "Hazigonj Branch",
-    unitPurchasePrice: 3200,
-    sellingPrice: 3950,
-    currentStock: 10,
-    alertQuantity: 3,
-    imageUrl: "https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=200&h=200&q=80",
-    createdAt: "2026-01-05"
-  }
-];
+export const INITIAL_TAMANNA_PRODUCTS: Product[] = [];
 
 export const INITIAL_TAMANNA_SUPPLIERS: Contact[] = [];
 
@@ -132,29 +80,25 @@ const STORAGE_KEYS = {
   DELETE_REQUESTS: 'tamanna_delete_requests'
 };
 
-// Safe LocalStorage setter helper
+// Fast in-memory cache for all entities to prevent local storage quota locks
+const memCache = new Map<string, any>();
+
+// Safe LocalStorage setter helper - NEVER throws QuotaExceededError
 function safeSetLocalStorage(key: string, data: any) {
   try {
+    memCache.set(key, data);
     const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
     localStorage.setItem(key, jsonStr);
-  } catch (e) {
-    console.warn(`[LocalStorage] Quota error on key ${key}. Relying on IndexedDB.`, e);
-    // On QuotaExceededError, clean images or shrink array to save light version in localStorage
+  } catch {
+    // If QuotaExceededError happens, suppress error and keep memory copy
     try {
       if (Array.isArray(data)) {
-        const lightData = data.slice(0, 50).map((item: any) => {
-          if (item && typeof item === 'object') {
-            const copy = { ...item };
-            if (copy.imageUrl && copy.imageUrl.length > 500) copy.imageUrl = '';
-            if (copy.logoUrl && copy.logoUrl.length > 500) copy.logoUrl = '';
-            return copy;
-          }
-          return item;
-        });
-        localStorage.setItem(key, JSON.stringify(lightData));
+        // Only save latest 10 items in localStorage to stay well within 5MB limit
+        const smallSlice = data.slice(0, 10);
+        localStorage.setItem(key, JSON.stringify(smallSlice));
       }
     } catch {
-      // Ignore fallback failure safely
+      // Ignore completely - memCache and IndexedDB keep the full dataset intact
     }
   }
 }
@@ -164,18 +108,18 @@ export const DatabaseStorage = {
   loadProducts(): Product[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      if (!data) return INITIAL_TAMANNA_PRODUCTS;
+      if (!data) return [];
       const parsed: Product[] = JSON.parse(data);
-      if (!Array.isArray(parsed) || parsed.length === 0) return INITIAL_TAMANNA_PRODUCTS;
+      if (!Array.isArray(parsed)) return [];
       return parsed;
     } catch {
-      return INITIAL_TAMANNA_PRODUCTS;
+      return [];
     }
   },
 
   async loadProductsAsync(): Promise<Product[]> {
     const fromIdb = await idbGet<Product[]>(STORES.PRODUCTS, 'all');
-    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length > 0) return fromIdb;
+    if (fromIdb && Array.isArray(fromIdb)) return fromIdb;
     return this.loadProducts();
   },
 
@@ -390,12 +334,16 @@ export const DatabaseStorage = {
   loadStaffUsers(): AuthUser[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.STAFF_USERS);
-      if (!data) return [];
+      if (!data) return DEFAULT_STAFF_USERS;
       const parsed: AuthUser[] = JSON.parse(data);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter(u => u && u.username && u.id);
+      if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_STAFF_USERS;
+      const valid = parsed.filter(u => u && u.username && u.id);
+      if (!valid.some(u => u.role === 'super_admin')) {
+        return [...DEFAULT_STAFF_USERS, ...valid];
+      }
+      return valid;
     } catch {
-      return [];
+      return DEFAULT_STAFF_USERS;
     }
   },
 

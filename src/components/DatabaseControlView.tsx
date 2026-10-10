@@ -28,11 +28,12 @@ import {
   FolderOpen,
   Eye,
   Loader2,
-  FileText
+  FileText,
+  KeyRound
 } from 'lucide-react';
 import { Language } from '../i18n/translations';
 import { Product, Sale, Contact, BusinessSettings } from '../types';
-import { supabase, isSupabaseConfigured, testSupabaseConnection } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, testSupabaseConnection, getSupabaseUrl } from '../lib/supabase';
 import { 
   listSupabaseStorageFiles, 
   uploadToSupabaseStorage, 
@@ -42,6 +43,8 @@ import {
   MEDIA_BUCKET 
 } from '../lib/supabaseStorage';
 import { pushAllToSupabase, fetchAllFromSupabase } from '../lib/supabaseSync';
+import { SUPABASE_SQL_SCRIPT } from '../data/supabaseSqlScript';
+import { CustomStorageModal } from './CustomStorageModal';
 
 interface DatabaseControlViewProps {
   products: Product[];
@@ -91,207 +94,9 @@ export const DatabaseControlView: React.FC<DatabaseControlViewProps> = ({
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<StorageFileItem | null>(null);
   const storageFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isCustomStorageOpen, setIsCustomStorageOpen] = useState(false);
 
-  const supabaseSqlScript = `-- ==============================================================================
--- TAMANNA MOTORS (তামান্না মোটরস) - SUPABASE POSTGRESQL SCHEMA & STORAGE
--- Location: HAZIGONJ-KACHUA MAIN ROAD, WEST BAZAR, HAZIGONJ, CHANDPUR.
--- Project: TAMANNA-MOTORS (ymvpphrryprluwjoivur)
--- Run this script in your Supabase Dashboard -> SQL Editor
--- ==============================================================================
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Users & Staff Table
-CREATE TABLE IF NOT EXISTS public.users (
-  id SERIAL PRIMARY KEY,
-  uid TEXT NOT NULL UNIQUE,
-  email TEXT NOT NULL,
-  name TEXT,
-  username TEXT,
-  role TEXT DEFAULT 'cashier',
-  phone TEXT,
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  status TEXT DEFAULT 'Active',
-  last_login TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Products & Motorcycle Spare Parts
-CREATE TABLE IF NOT EXISTS public.products (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  sku TEXT NOT NULL,
-  category TEXT NOT NULL,
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  unit_purchase_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-  selling_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-  current_stock INTEGER NOT NULL DEFAULT 0,
-  alert_quantity INTEGER DEFAULT 5,
-  image_url TEXT,
-  created_at TEXT
-);
-
--- Contacts: Customers & Suppliers
-CREATE TABLE IF NOT EXISTS public.contacts (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  name TEXT NOT NULL,
-  business_name TEXT,
-  email TEXT,
-  phone TEXT,
-  customer_group TEXT,
-  credit_limit NUMERIC(12, 2),
-  address TEXT,
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  balance NUMERIC(12, 2) DEFAULT 0.00,
-  total_purchases NUMERIC(12, 2) DEFAULT 0.00,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Sales & Invoices
-CREATE TABLE IF NOT EXISTS public.sales (
-  id TEXT PRIMARY KEY,
-  invoice_no TEXT NOT NULL UNIQUE,
-  type TEXT DEFAULT 'pos',
-  customer_name TEXT NOT NULL,
-  customer_phone TEXT,
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  payment_status TEXT DEFAULT 'Paid',
-  payment_method TEXT DEFAULT 'Cash',
-  total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-  invoice_due NUMERIC(12, 2) DEFAULT 0.00,
-  sale_date TEXT NOT NULL,
-  items_count INTEGER DEFAULT 1,
-  subtotal NUMERIC(12, 2),
-  tax_amount NUMERIC(12, 2),
-  discount_amount NUMERIC(12, 2),
-  amount_tendered NUMERIC(12, 2),
-  change_due NUMERIC(12, 2),
-  cashier_name TEXT,
-  due_notes TEXT,
-  items_data TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Due Payment History
-CREATE TABLE IF NOT EXISTS public.due_payments (
-  id TEXT PRIMARY KEY,
-  sale_id TEXT REFERENCES public.sales(id) ON DELETE CASCADE,
-  invoice_no TEXT,
-  payment_date TEXT NOT NULL,
-  amount_paid NUMERIC(12, 2) NOT NULL,
-  payment_method TEXT DEFAULT 'Cash',
-  remaining_due NUMERIC(12, 2) DEFAULT 0.00,
-  received_by TEXT,
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Purchases
-CREATE TABLE IF NOT EXISTS public.purchases (
-  id TEXT PRIMARY KEY,
-  purchase_no TEXT NOT NULL UNIQUE,
-  supplier_name TEXT NOT NULL,
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  purchase_status TEXT DEFAULT 'Received',
-  payment_status TEXT DEFAULT 'Paid',
-  purchase_date TEXT NOT NULL,
-  grand_total NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-  payment_due NUMERIC(12, 2) DEFAULT 0.00,
-  items_count INTEGER DEFAULT 1,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Expenses
-CREATE TABLE IF NOT EXISTS public.expenses (
-  id TEXT PRIMARY KEY,
-  expense_no TEXT NOT NULL UNIQUE,
-  category TEXT NOT NULL,
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  expense_date TEXT NOT NULL,
-  amount NUMERIC(12, 2) NOT NULL,
-  reference_no TEXT,
-  note TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Audit Logs
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-  id TEXT PRIMARY KEY,
-  timestamp TEXT NOT NULL,
-  action_type TEXT NOT NULL,
-  entity_type TEXT NOT NULL,
-  entity_id TEXT NOT NULL,
-  entity_title TEXT NOT NULL,
-  performed_by TEXT NOT NULL,
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  details TEXT
-);
-
--- Delete Requests
-CREATE TABLE IF NOT EXISTS public.delete_requests (
-  id TEXT PRIMARY KEY,
-  entity_type TEXT NOT NULL,
-  entity_id TEXT NOT NULL,
-  entity_title TEXT NOT NULL,
-  requested_by TEXT NOT NULL,
-  request_date TEXT NOT NULL,
-  reason TEXT NOT NULL,
-  damage_severity TEXT DEFAULT 'None',
-  status TEXT DEFAULT 'Pending',
-  business_location TEXT DEFAULT 'Hazigonj Branch',
-  item_value NUMERIC(12, 2) DEFAULT 0.00
-);
-
--- App Settings
-CREATE TABLE IF NOT EXISTS public.app_settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_products_sku ON public.products(sku);
-CREATE INDEX IF NOT EXISTS idx_sales_invoice_no ON public.sales(invoice_no);
-CREATE INDEX IF NOT EXISTS idx_due_payments_sale_id ON public.due_payments(sale_id);
-
--- RLS Policies
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.due_payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.delete_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow all to users" ON public.users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to products" ON public.products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to contacts" ON public.contacts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to sales" ON public.sales FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to due_payments" ON public.due_payments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to purchases" ON public.purchases FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to expenses" ON public.expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to audit_logs" ON public.audit_logs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to delete_requests" ON public.delete_requests FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all to app_settings" ON public.app_settings FOR ALL USING (true) WITH CHECK (true);
-
--- Supabase Storage Bucket Setup
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('tamanna-media', 'tamanna-media', true) 
-ON CONFLICT (id) DO NOTHING;
-
-CREATE POLICY "Allow public read tamanna-media" ON storage.objects 
-FOR SELECT USING (bucket_id = 'tamanna-media');
-
-CREATE POLICY "Allow public insert tamanna-media" ON storage.objects 
-FOR INSERT WITH CHECK (bucket_id = 'tamanna-media');
-
-CREATE POLICY "Allow public delete tamanna-media" ON storage.objects 
-FOR DELETE USING (bucket_id = 'tamanna-media');
-`;
+  const supabaseSqlScript = SUPABASE_SQL_SCRIPT;
 
   // Fetch live Cloud SQL PostgreSQL status from backend
   const fetchDbStatus = async () => {
@@ -521,6 +326,14 @@ FOR DELETE USING (bucket_id = 'tamanna-media');
             </button>
 
             <button
+              onClick={() => setIsCustomStorageOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2 text-xs font-bold shadow-lg shadow-purple-950/30 transition-all cursor-pointer"
+            >
+              <KeyRound className="h-3.5 w-3.5" />
+              <span>{lang === 'bn' ? 'কাস্টম ক্রেডেনশিয়াল' : 'Custom Config'}</span>
+            </button>
+
+            <button
               onClick={() => setShowSqlModal(true)}
               className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 text-xs font-bold shadow-lg shadow-indigo-950/30 transition-all"
             >
@@ -600,7 +413,7 @@ FOR DELETE USING (bucket_id = 'tamanna-media');
                 <span>TAMANNA-MOTORS</span>
               </div>
               <p className="mt-1 text-[11px] font-mono text-emerald-800 dark:text-emerald-400 truncate">
-                ymvpphrryprluwjoivur.supabase.co
+                {getSupabaseUrl().replace(/^https?:\/\//, '')}
               </p>
               <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                 <span className="text-slate-500">{lang === 'bn' ? 'কানেকশন স্ট্যাটাস:' : 'Connection:'}</span>
@@ -1005,6 +818,13 @@ FOR DELETE USING (bucket_id = 'tamanna-media');
           </div>
         </div>
       )}
+      {/* Custom Storage Modal */}
+      <CustomStorageModal
+        isOpen={isCustomStorageOpen}
+        onClose={() => setIsCustomStorageOpen(false)}
+        lang={lang}
+        onConfigSaved={fetchDbStatus}
+      />
     </div>
   );
 };

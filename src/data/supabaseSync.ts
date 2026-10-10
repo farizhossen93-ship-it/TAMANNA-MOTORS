@@ -181,9 +181,21 @@ export const SupabaseSync = {
   async deleteSale(saleId: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     try {
+      await supabase.from('due_payments').delete().eq('sale_id', saleId);
       const { error } = await supabase.from('sales').delete().eq('id', saleId);
       return !error;
     } catch (e) {
+      return false;
+    }
+  },
+
+  async deleteAllSales(): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      await supabase.from('due_payments').delete().neq('id', '___none___');
+      const { error } = await supabase.from('sales').delete().neq('id', '___none___');
+      return !error;
+    } catch {
       return false;
     }
   },
@@ -247,23 +259,192 @@ export const SupabaseSync = {
     }
   },
 
+  async deleteAllContacts(): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('contacts').delete().neq('id', 'cust-walkin');
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
   // Staff Users Sync
+  async fetchUsers(): Promise<AuthUser[] | null> {
+    if (!isSupabaseConfigured()) return null;
+    try {
+      const { data, error } = await supabase.from('users').select('*');
+      if (error || !data) return null;
+      return data.map((u: any) => ({
+        id: u.uid || `usr-${u.id}`,
+        name: u.name || u.username,
+        username: u.username,
+        email: u.email,
+        password: u.password || 'admin123',
+        role: u.role || 'cashier',
+        phone: u.phone || '',
+        businessLocation: u.business_location || 'Hazigonj Branch',
+        status: u.status || 'Active',
+        emailVerified: Boolean(u.email_verified),
+        lastLogin: u.last_login || 'Never'
+      }));
+    } catch {
+      return null;
+    }
+  },
+
   async upsertUser(user: AuthUser): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     try {
       const { error } = await supabase.from('users').upsert({
         uid: user.id,
         email: user.email,
+        password: user.password || 'admin123',
         name: user.name,
         username: user.username,
         role: user.role,
         phone: user.phone || null,
         business_location: user.businessLocation || 'Hazigonj Branch',
         status: user.status || 'Active',
+        email_verified: user.emailVerified ?? false,
         last_login: user.lastLogin || new Date().toISOString()
       }, { onConflict: 'uid' });
       return !error;
     } catch (e) {
+      return false;
+    }
+  },
+
+  async deleteUser(uid: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('users').delete().eq('uid', uid);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  // Purchases Sync
+  async fetchPurchases(): Promise<Purchase[] | null> {
+    if (!isSupabaseConfigured()) return null;
+    try {
+      const { data, error } = await supabase.from('purchases').select('*').order('created_at', { ascending: false });
+      if (error || !data) return null;
+      return data.map((item: any) => ({
+        id: item.id,
+        purchaseNo: item.purchase_no,
+        supplierName: item.supplier_name,
+        businessLocation: item.business_location || 'Hazigonj Branch',
+        purchaseStatus: item.purchase_status || 'Received',
+        paymentStatus: item.payment_status || 'Paid',
+        purchaseDate: item.purchase_date,
+        grandTotal: Number(item.grand_total) || 0,
+        paymentDue: Number(item.payment_due) || 0,
+        itemsCount: item.items_count || 1
+      }));
+    } catch {
+      return null;
+    }
+  },
+
+  async upsertPurchase(purchase: Purchase): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('purchases').upsert({
+        id: purchase.id,
+        purchase_no: purchase.purchaseNo,
+        supplier_name: purchase.supplierName,
+        business_location: purchase.businessLocation || 'Hazigonj Branch',
+        purchase_status: purchase.purchaseStatus,
+        payment_status: purchase.paymentStatus,
+        purchase_date: purchase.purchaseDate,
+        grand_total: purchase.grandTotal,
+        payment_due: purchase.paymentDue || 0,
+        items_count: purchase.itemsCount || 1
+      }, { onConflict: 'id' });
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  async deletePurchase(purchaseId: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('purchases').delete().eq('id', purchaseId);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  async deleteAllPurchases(): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('purchases').delete().neq('id', '___none___');
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  // Expenses Sync
+  async fetchExpenses(): Promise<Expense[] | null> {
+    if (!isSupabaseConfigured()) return null;
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('created_at', { ascending: false });
+      if (error || !data) return null;
+      return data.map((item: any) => ({
+        id: item.id,
+        expenseNo: item.expense_no,
+        category: item.category,
+        businessLocation: item.business_location || 'Hazigonj Branch',
+        expenseDate: item.expense_date,
+        amount: Number(item.amount) || 0,
+        referenceNo: item.reference_no || '',
+        note: item.note || ''
+      }));
+    } catch {
+      return null;
+    }
+  },
+
+  async upsertExpense(expense: Expense): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('expenses').upsert({
+        id: expense.id,
+        expense_no: expense.expenseNo,
+        category: expense.category,
+        business_location: expense.businessLocation || 'Hazigonj Branch',
+        expense_date: expense.expenseDate,
+        amount: expense.amount,
+        reference_no: expense.referenceNo || null,
+        note: expense.note || null
+      }, { onConflict: 'id' });
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  async deleteExpense(expenseId: string): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  async deleteAllExpenses(): Promise<boolean> {
+    if (!isSupabaseConfigured()) return false;
+    try {
+      const { error } = await supabase.from('expenses').delete().neq('id', '___none___');
+      return !error;
+    } catch {
       return false;
     }
   },

@@ -39,8 +39,8 @@ import {
   Legend,
   ReferenceLine
 } from 'recharts';
-import { SALES_LAST_30_DAYS, MONTHLY_SALES_PERFORMANCE, MonthlySalesData } from '../data/mockData';
-import { Product, Sale, UserRole } from '../types';
+import { MonthlySalesData } from '../data/mockData';
+import { Product, Sale, Purchase, Expense, UserRole } from '../types';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 
 interface DashboardViewProps {
@@ -48,6 +48,8 @@ interface DashboardViewProps {
   onNavigate: (route: string) => void;
   products: Product[];
   sales: Sale[];
+  purchases?: Purchase[];
+  expenses?: Expense[];
   lang?: Language;
   userRole?: UserRole;
   onQuickRestock?: (productId: string, amount: number) => void;
@@ -58,6 +60,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigate,
   products,
   sales,
+  purchases = [],
+  expenses = [],
   lang = 'en',
   userRole = 'super_admin',
   onQuickRestock
@@ -140,32 +144,142 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     (sales || []).reduce((acc, s) => acc + (Number(s.invoiceDue) || 0), 0),
     [sales]
   );
-  const totalPurchaseValue = 0.00;
-  const purchaseDueValue = 0.00;
+  const totalPurchaseValue = useMemo(() => 
+    (purchases || []).reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0),
+    [purchases]
+  );
+  const purchaseDueValue = useMemo(() => 
+    (purchases || []).reduce((acc, p) => acc + (Number(p.paymentDue) || 0), 0),
+    [purchases]
+  );
   const totalPurchaseReturnValue = 0.00;
-  const totalExpensesValue = 0.00;
+  const totalExpensesValue = useMemo(() => 
+    (expenses || []).reduce((acc, e) => acc + (Number(e.amount) || 0), 0),
+    [expenses]
+  );
+
+  // Dynamic 30 Days sales calculation from real sales
+  const last30DaysSalesData = useMemo(() => {
+    const daysArr = [];
+    const now = new Date();
+
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const dayName = d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short' });
+      const dateFormatted = d.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { day: 'numeric', month: 'short' });
+
+      const daySales = (sales || []).filter(s => {
+        if (!s.saleDate) return false;
+        try {
+          const sDate = new Date(s.saleDate);
+          return (
+            sDate.getDate() === d.getDate() &&
+            sDate.getMonth() === d.getMonth() &&
+            sDate.getFullYear() === d.getFullYear()
+          );
+        } catch {
+          return false;
+        }
+      });
+
+      const actualSum = daySales.reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0);
+      daysArr.push({
+        day: dayName,
+        date: dateFormatted,
+        amount: actualSum
+      });
+    }
+    return daysArr;
+  }, [sales, lang]);
+
+  const total30DaysSales = useMemo(() => 
+    last30DaysSalesData.reduce((acc, d) => acc + d.amount, 0),
+    [last30DaysSalesData]
+  );
 
   // Chart coordinate calculations
   const chartHeight = 220;
   const chartWidth = 720;
   const padding = { top: 25, right: 30, bottom: 35, left: 60 };
 
-  const amounts = SALES_LAST_30_DAYS.map(d => d.amount * 2.5); // Scaled for BDT
-  const minAmount = Math.min(...amounts) * 0.85;
-  const maxAmount = Math.max(...amounts) * 1.08;
+  const amounts = last30DaysSalesData.map(d => d.amount);
+  const maxDayAmount = Math.max(...amounts, 100);
+  const minAmount = 0;
+  const maxAmount = maxDayAmount * 1.15;
 
-  const points = SALES_LAST_30_DAYS.map((item, index) => {
-    const amountInBdt = item.amount * 2.5;
-    const x = padding.left + (index / (SALES_LAST_30_DAYS.length - 1)) * (chartWidth - padding.left - padding.right);
-    const y = padding.top + (1 - (amountInBdt - minAmount) / (maxAmount - minAmount)) * (chartHeight - padding.top - padding.bottom);
-    return { ...item, amount: amountInBdt, x, y };
+  const points = last30DaysSalesData.map((item, index) => {
+    const x = padding.left + (index / Math.max(1, last30DaysSalesData.length - 1)) * (chartWidth - padding.left - padding.right);
+    const y = padding.top + (1 - (item.amount - minAmount) / Math.max(1, maxAmount - minAmount)) * (chartHeight - padding.top - padding.bottom);
+    return { ...item, x, y };
   });
 
   const linePath = points.reduce((acc, point, i) => {
     return i === 0 ? `M ${point.x} ${point.y}` : `${acc} L ${point.x} ${point.y}`;
   }, '');
 
-  const areaPath = `${linePath} L ${points[points.length - 1].x} ${chartHeight - padding.bottom} L ${points[0].x} ${chartHeight - padding.bottom} Z`;
+  const areaPath = points.length > 0
+    ? `${linePath} L ${points[points.length - 1].x} ${chartHeight - padding.bottom} L ${points[0].x} ${chartHeight - padding.bottom} Z`
+    : '';
+
+  // Dynamic monthly sales calculation from real sales
+  const monthlySalesPerformance = useMemo<MonthlySalesData[]>(() => {
+    const monthNamesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNamesBn = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+    const currentYear = new Date().getFullYear();
+    const currentMonthIdx = new Date().getMonth();
+
+    const result: MonthlySalesData[] = [];
+    let prevMonthAmount = 0;
+
+    for (let m = 0; m <= currentMonthIdx; m++) {
+      const monthSales = (sales || []).filter(s => {
+        if (!s.saleDate) return false;
+        try {
+          const d = new Date(s.saleDate);
+          return d.getFullYear() === currentYear && d.getMonth() === m;
+        } catch {
+          return false;
+        }
+      });
+
+      const currentTotal = monthSales.reduce((acc, s) => acc + (Number(s.totalAmount) || 0), 0);
+      const ordersCount = monthSales.length;
+      const momGrowth = prevMonthAmount > 0
+        ? Number((((currentTotal - prevMonthAmount) / prevMonthAmount) * 100).toFixed(1))
+        : 0;
+
+      result.push({
+        month: monthNamesEn[m],
+        monthBn: monthNamesBn[m],
+        fullMonth: `${monthNamesEn[m]} ${currentYear}`,
+        current2026: currentTotal,
+        previous2025: 0,
+        prevMonthSales: prevMonthAmount,
+        target: 0,
+        momGrowth,
+        yoyGrowth: 0,
+        ordersCount
+      });
+
+      prevMonthAmount = currentTotal;
+    }
+
+    return result;
+  }, [sales]);
+
+  const totalMonthlySalesSum = useMemo(() => 
+    monthlySalesPerformance.reduce((acc, m) => acc + m.current2026, 0),
+    [monthlySalesPerformance]
+  );
+  const avgMonthlyRevenue = monthlySalesPerformance.length > 0
+    ? Math.round(totalMonthlySalesSum / monthlySalesPerformance.length)
+    : 0;
+  const bestMonthObj = useMemo(() => {
+    if (monthlySalesPerformance.length === 0) return null;
+    return [...monthlySalesPerformance].sort((a, b) => b.current2026 - a.current2026)[0];
+  }, [monthlySalesPerformance]);
+  const currentMonthData = monthlySalesPerformance[monthlySalesPerformance.length - 1];
 
   // Low stock items
   const lowStockItems = products.filter(p => p.currentStock <= p.alertQuantity);
@@ -173,7 +287,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Welcome Banner / Overview Header */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs lg:flex-row lg:items-center lg:justify-between transition-colors">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-5 shadow-xs lg:flex-row lg:items-center lg:justify-between transition-colors">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
@@ -537,7 +651,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="text-slate-600 dark:text-slate-300">{lang === 'bn' ? 'দৈনিক বিক্রয়' : 'Daily Revenue'}</span>
               </div>
               <div className="font-mono text-slate-900 dark:text-white font-semibold tabular-nums">
-                30-Day: ৳547,175
+                30-Day: ৳{total30DaysSales.toLocaleString('en-US')}
               </div>
             </div>
           </div>
@@ -930,31 +1044,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 pb-4 border-b border-slate-100 dark:border-slate-800/60">
           <div className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-800/40 p-3">
             <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{t.dashboard.avgMonthlyRevenue}</div>
-            <div className="mt-1 font-mono text-base font-bold text-slate-900 dark:text-white tabular-nums">৳520,700</div>
-            <div className="mt-0.5 text-[10px] text-slate-600 dark:text-slate-300">{lang === 'bn' ? '১০ মাসের গড় রাজস্ব' : '10-month retail average'}</div>
+            <div className="mt-1 font-mono text-base font-bold text-slate-900 dark:text-white tabular-nums">
+              ৳{avgMonthlyRevenue.toLocaleString('en-US')}
+            </div>
+            <div className="mt-0.5 text-[10px] text-slate-600 dark:text-slate-300">
+              {lang === 'bn' ? `${monthlySalesPerformance.length} মাসের গড় বিক্রয়` : `${monthlySalesPerformance.length}-month sales average`}
+            </div>
           </div>
           <div className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-800/40 p-3">
             <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{t.dashboard.bestMonth}</div>
             <div className="mt-1 font-mono text-base font-bold text-emerald-800 dark:text-emerald-400 tabular-nums">
-              {lang === 'bn' ? 'অক্টোবর (৳৬৫৫k)' : 'October (৳655k)'}
+              {bestMonthObj && bestMonthObj.current2026 > 0
+                ? `${lang === 'bn' ? bestMonthObj.monthBn : bestMonthObj.month} (৳${(bestMonthObj.current2026 / 1000).toFixed(0)}k)`
+                : (lang === 'bn' ? 'কোন বিক্রয় নেই' : 'No sales yet')}
             </div>
-            <div className="mt-0.5 text-[10px] text-emerald-800 dark:text-emerald-400 font-medium">104.0% {lang === 'bn' ? 'টার্গেট অর্জিত' : 'of monthly target'}</div>
+            <div className="mt-0.5 text-[10px] text-emerald-800 dark:text-emerald-400 font-medium">
+              {bestMonthObj && bestMonthObj.current2026 > 0
+                ? `${bestMonthObj.ordersCount} ${lang === 'bn' ? 'টি চালান' : 'invoices'}`
+                : (lang === 'bn' ? 'পিওএস-এ বিক্রয় শুরু করুন' : 'Record sales in POS')}
+            </div>
           </div>
           <div className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-800/40 p-3">
             <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{t.dashboard.monthOverMonthGrowth}</div>
             <div className="mt-1 flex items-center gap-1 font-mono text-base font-bold text-blue-600 dark:text-blue-400 tabular-nums">
               <ArrowUpRight className="h-4 w-4" />
-              <span>+4.3%</span>
+              <span>{currentMonthData ? `${currentMonthData.momGrowth >= 0 ? '+' : ''}${currentMonthData.momGrowth}%` : '0%'}</span>
             </div>
-            <div className="mt-0.5 text-[10px] text-slate-600 dark:text-slate-300">{lang === 'bn' ? 'সেপ্টেম্বরের চেয়ে +৳২৭,০০০' : '+৳27k vs September'}</div>
+            <div className="mt-0.5 text-[10px] text-slate-600 dark:text-slate-300">
+              {lang === 'bn' ? 'চলতি মাসের পরিবর্তন' : 'Current month MoM'}
+            </div>
           </div>
           <div className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-800/40 p-3">
-            <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{t.dashboard.yoyGrowth}</div>
+            <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{lang === 'bn' ? 'মোট বিক্রয় চালানের সংখ্যা' : 'Total Invoices'}</div>
             <div className="mt-1 flex items-center gap-1 font-mono text-base font-bold text-emerald-800 dark:text-emerald-400 tabular-nums">
-              <ArrowUpRight className="h-4 w-4" />
-              <span>+25.4%</span>
+              <span>{(sales || []).length} {lang === 'bn' ? 'টি' : 'orders'}</span>
             </div>
-            <div className="mt-0.5 text-[10px] text-emerald-800 dark:text-emerald-400 font-medium">{lang === 'bn' ? 'পূর্ববর্তী বছরের তুলনায়' : 'vs prior year (FY 2025)'}</div>
+            <div className="mt-0.5 text-[10px] text-emerald-800 dark:text-emerald-400 font-medium">
+              {lang === 'bn' ? 'লাইভ সিস্টেম ডেটা' : 'Live system data'}
+            </div>
           </div>
         </div>
 
@@ -962,7 +1089,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="mt-4 w-full h-[320px] select-none">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={MONTHLY_SALES_PERFORMANCE}
+              data={monthlySalesPerformance}
               margin={{ top: 15, right: 15, bottom: 5, left: 10 }}
             >
               <CartesianGrid

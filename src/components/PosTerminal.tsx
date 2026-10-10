@@ -355,9 +355,9 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
       </header>
 
       {/* POS Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         {/* Left: Motor Parts Catalog Grid */}
-        <div className="flex flex-1 flex-col overflow-hidden border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4">
+        <div className="flex flex-1 flex-col overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 sm:p-4">
           <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -461,7 +461,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
         </div>
 
         {/* Right: Cart & Checkout Section */}
-        <div className="flex w-96 flex-col border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl">
+        <div className="flex w-full lg:w-96 flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl max-h-[50vh] lg:max-h-full">
           {/* Customer Selection */}
           <div className="border-b border-slate-200 dark:border-slate-800 p-3.5 space-y-2">
             <div className="flex items-center justify-between text-xs">
@@ -491,23 +491,39 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
             <div className="space-y-1.5">
               <select
                 value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                onChange={(e) => {
+                  const custId = e.target.value;
+                  setSelectedCustomerId(custId);
+                  const found = customers.find(c => c.id === custId);
+                  if (found && found.phone) {
+                    setCustomerPhone(found.phone);
+                  }
+                }}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none"
               >
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name} {c.customerGroup ? `(${c.customerGroup})` : ''}
+                    {c.name} {c.phone ? `• ${c.phone}` : ''} {c.customerGroup ? `(${c.customerGroup})` : ''}
                   </option>
                 ))}
               </select>
 
-              <input
-                type="text"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder={lang === 'bn' ? 'গ্রাহকের মোবাইল নম্বর (বকেয়ার জন্য জরুরি)' : 'Customer phone (required for dues)'}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-800 dark:text-white focus:outline-none"
-              />
+              <div className="flex items-center gap-2 pt-0.5">
+                <input
+                  type="text"
+                  value={currentCustomer.name}
+                  readOnly
+                  className="w-1/2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate"
+                  title="Customer Name"
+                />
+                <input
+                  type="text"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder={lang === 'bn' ? 'ফোন নম্বর (+ Name)' : 'Phone number (+ Name)'}
+                  className="w-1/2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-800 dark:text-white focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 

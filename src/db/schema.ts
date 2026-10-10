@@ -13,6 +13,7 @@ export const users = pgTable('users', {
   phone: text('phone'),
   businessLocation: text('business_location').default('Hazigonj Branch'),
   status: text('status').default('Active'),
+  emailVerified: boolean('email_verified').default(false),
   lastLogin: text('last_login'),
   createdAt: timestamp('created_at').defaultNow(),
 });

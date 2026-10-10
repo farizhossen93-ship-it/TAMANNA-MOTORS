@@ -1,9 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Settings, Save, CheckCircle, AlertCircle, Building2, Percent, DollarSign, Upload, Image, Trash2, Sparkles, RefreshCw, Eye, Database, Cloud, Wifi, Shield } from 'lucide-react';
+import { Settings, Save, CheckCircle, AlertCircle, Building2, Percent, DollarSign, Upload, Image, Trash2, RefreshCw, Eye, Database, Cloud, Wifi, Shield } from 'lucide-react';
 import { BusinessSettings, InvoiceSettings } from '../types';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 import { uploadToSupabaseStorage } from '../lib/supabaseStorage';
-import { INITIAL_TAMANNA_PRODUCTS } from '../data/dbManager';
 
 interface SettingsViewProps {
   type: 'business' | 'invoice';
@@ -15,7 +14,6 @@ interface SettingsViewProps {
   onClearTempData?: () => void;
   onClearAllMockData?: () => void;
   onResetDatabase?: () => void;
-  onRestoreCatalog?: () => void;
   isSuperAdmin?: boolean;
 }
 
@@ -29,7 +27,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onClearTempData,
   onClearAllMockData,
   onResetDatabase,
-  onRestoreCatalog,
   isSuperAdmin = false
 }) => {
   const t = TRANSLATIONS[lang];
@@ -369,33 +366,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Database Maintenance & Catalog Restoration (Super Admin Only) */}
+      {/* Database Maintenance & Data Cleanup (Super Admin Only) */}
       {isSuperAdmin && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
             <Trash2 className="h-4 w-4 text-rose-500" />
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              {lang === 'bn' ? 'ডেটাবেজ ও ক্যাটালগ রিস্টোর ব্যবস্থাপনা (Super Admin)' : 'Database & Catalog Restoration (Super Admin)'}
+              {lang === 'bn' ? 'ডেটাবেজ ও ডেটা ক্লিয়ার ব্যবস্থাপনা (Super Admin)' : 'Database & Data Cleanup Management (Super Admin)'}
             </h4>
           </div>
           <p className="text-xs text-slate-500">
             {lang === 'bn' 
-              ? 'যদি কোনো কারণে পণ্য বা ডেটা মুছে যায়, তবে নিচের বাটনে ক্লিক করে তাৎক্ষণিকভাবে ডিফল্ট পার্টস ক্যাটালগ রিস্টোর করুন।' 
-              : 'Restore default Tamanna Motors motorcycle spare parts catalog instantly if data is cleared.'}
+              ? 'সকল মক/ডেমো ডেটা বা পরীক্ষামূলক তথ্য এক ক্লিকে সম্পূর্ণভাবে মুছে ফেলতে নিচের বাটনটি ব্যবহার করুন।' 
+              : 'Wipe all mock/demo records and start fresh with your own live store data.'}
           </p>
 
           <div className="flex flex-wrap gap-3 pt-1">
-            {onRestoreCatalog && (
-              <button
-                type="button"
-                onClick={onRestoreCatalog}
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                <span>{lang === 'bn' ? 'ডিফল্ট পার্টস ক্যাটালগ রিস্টোর করুন' : 'Restore Default Tamanna Motors Catalog'}</span>
-              </button>
-            )}
-
             {onClearAllMockData && (
               <button
                 type="button"
@@ -420,6 +406,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Developer Credit - Discreet & Professional */}
+      <div className="pt-6 pb-2 border-t border-slate-200/80 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 dark:text-slate-500 gap-3">
+        <div className="flex items-center gap-2 text-[11px]">
+          <div className="h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></div>
+          <span className="font-semibold tracking-wider uppercase text-slate-500 dark:text-slate-400">
+            Enterprise System Architecture
+          </span>
+        </div>
+        <div className="flex flex-col sm:items-end text-center sm:text-right">
+          <span className="text-[11px] font-black tracking-widest text-slate-700 dark:text-slate-200 uppercase">
+            DEVELOPER: JUBAIR AHAMMED
+          </span>
+          <span className="text-[10px] font-extrabold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
+            FOUNDER — DEVOX STUDIO
+          </span>
+        </div>
+      </div>
     </div>
   );
 };

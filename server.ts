@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { db } from './src/db/index.ts';
 import * as schema from './src/db/schema.ts';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, ne } from 'drizzle-orm';
 import { getOrCreateUser } from './src/db/users.ts';
 import { adminAuth } from './src/lib/firebase-admin.ts';
 
@@ -245,6 +245,17 @@ app.delete('/api/sales/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/sales', async (req, res) => {
+  try {
+    await db.delete(schema.duePayments);
+    await db.delete(schema.sales);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting all sales:', error);
+    res.status(500).json({ error: 'Failed to delete all sales' });
+  }
+});
+
 // Contacts API
 app.get('/api/contacts', async (req, res) => {
   try {
@@ -352,6 +363,17 @@ app.delete('/api/contacts/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/contacts', async (req, res) => {
+  try {
+    // Delete all except walkin customer
+    await db.delete(schema.contacts).where(ne(schema.contacts.id, 'cust-walkin'));
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting contacts:', error);
+    res.status(500).json({ error: 'Failed to delete contacts' });
+  }
+});
+
 // Users & Staff Management API
 app.get('/api/users', async (req, res) => {
   try {
@@ -382,6 +404,7 @@ app.post('/api/users', async (req, res) => {
         phone: u.phone || null,
         businessLocation: u.businessLocation || 'Hazigonj Branch',
         status: u.status || 'Active',
+        emailVerified: u.emailVerified ?? false,
         lastLogin: u.lastLogin || new Date().toISOString(),
       })
       .onConflictDoUpdate({
@@ -395,6 +418,7 @@ app.post('/api/users', async (req, res) => {
           phone: u.phone || null,
           businessLocation: u.businessLocation || 'Hazigonj Branch',
           status: u.status || 'Active',
+          emailVerified: u.emailVerified ?? false,
           lastLogin: u.lastLogin || new Date().toISOString(),
         }
       });
@@ -423,6 +447,7 @@ app.post('/api/users/sync', async (req, res) => {
             phone: u.phone || null,
             businessLocation: u.businessLocation || 'Hazigonj Branch',
             status: u.status || 'Active',
+            emailVerified: u.emailVerified ?? false,
             lastLogin: u.lastLogin || new Date().toISOString(),
           })
           .onConflictDoUpdate({
@@ -436,6 +461,7 @@ app.post('/api/users/sync', async (req, res) => {
               phone: u.phone || null,
               businessLocation: u.businessLocation || 'Hazigonj Branch',
               status: u.status || 'Active',
+              emailVerified: u.emailVerified ?? false,
               lastLogin: u.lastLogin || new Date().toISOString(),
             }
           });
@@ -470,6 +496,16 @@ app.delete('/api/purchases/:id', async (req, res) => {
   }
 });
 
+app.delete('/api/purchases', async (req, res) => {
+  try {
+    await db.delete(schema.purchases);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting purchases:', error);
+    res.status(500).json({ error: 'Failed to delete purchases' });
+  }
+});
+
 app.delete('/api/expenses/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -478,6 +514,16 @@ app.delete('/api/expenses/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Error deleting expense:', error);
     res.status(500).json({ error: 'Failed to delete expense' });
+  }
+});
+
+app.delete('/api/expenses', async (req, res) => {
+  try {
+    await db.delete(schema.expenses);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting expenses:', error);
+    res.status(500).json({ error: 'Failed to delete expenses' });
   }
 });
 

@@ -20,11 +20,10 @@ import {
   Sparkles,
   Layers,
   CircleDot,
-  CreditCard,
-  Database
+  CreditCard
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
-import { BusinessSettings, UserRole } from '../types';
+import { BusinessSettings, UserRole, AuthUser } from '../types';
 
 interface SidebarProps {
   currentRoute: string;
@@ -35,6 +34,7 @@ interface SidebarProps {
   lang: Language;
   businessSettings?: BusinessSettings;
   userRole?: UserRole;
+  currentUser?: AuthUser | null;
 }
 
 interface SubMenuItem {
@@ -59,7 +59,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggle,
   lang,
   businessSettings,
-  userRole = 'super_admin'
+  userRole = 'super_admin',
+  currentUser
 }) => {
   const t = TRANSLATIONS[lang];
   const [searchQuery, setSearchQuery] = useState('');
@@ -217,12 +218,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const filteredMenuItems = useMemo(() => {
     let items = menuArchitecture;
 
+    // Strict Super Admin check: User Management is ONLY for real Super Admin!
+    const isSuperAdmin = currentUser?.role === 'super_admin';
+    if (!isSuperAdmin || userRole !== 'super_admin') {
+      items = items.filter(i => i.id !== 'user-management');
+    }
+
     if (userRole === 'cashier') {
-      items = menuArchitecture.filter(i => ['home', 'sales', 'products'].includes(i.id));
+      items = items.filter(i => ['home', 'sales', 'products', 'synced-dues'].includes(i.id));
     } else if (userRole === 'manager') {
-      items = menuArchitecture.filter(i => ['home', 'products', 'purchase', 'stock-transfer', 'contact', 'sales', 'expenses'].includes(i.id));
+      items = items.filter(i => ['home', 'products', 'purchase', 'stock-transfer', 'contact', 'sales', 'expenses', 'synced-dues'].includes(i.id));
     } else if (userRole === 'admin') {
-      items = menuArchitecture.filter(i => i.id !== 'user-management');
+      items = items.filter(i => i.id !== 'user-management');
     }
 
     if (!searchQuery.trim()) return items;
@@ -272,7 +279,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col border-r border-slate-800 bg-slate-900 dark:bg-slate-950 text-slate-200 transition-all duration-300 ease-in-out lg:static select-none shadow-xl lg:shadow-none ${
+        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col border-r border-white/10 dark:border-white/5 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-2xl text-slate-200 transition-all duration-300 ease-in-out lg:static select-none shadow-2xl lg:shadow-none ${
           isOpen
             ? 'w-72 sm:w-80 lg:w-64 xl:w-72 translate-x-0'
             : '-translate-x-full lg:w-20 lg:translate-x-0'

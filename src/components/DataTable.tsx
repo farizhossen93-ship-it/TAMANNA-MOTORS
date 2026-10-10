@@ -253,7 +253,7 @@ export function DataTable<T extends Record<string, any>>({
       </div>
 
       {/* Control Bar: Entries selector, Search, and Export Buttons */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs lg:flex-row lg:items-center lg:justify-between transition-colors">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-3.5 shadow-xs lg:flex-row lg:items-center lg:justify-between transition-colors">
         {/* Left side: Show X entries & Search */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
@@ -334,7 +334,7 @@ export function DataTable<T extends Record<string, any>>({
       )}
 
       {/* Main Table Area */}
-      <div id={tableId} className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs transition-colors">
+      <div id={tableId} className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl shadow-xs transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             {/* Table Header */}

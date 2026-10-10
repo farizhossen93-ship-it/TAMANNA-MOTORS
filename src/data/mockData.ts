@@ -1,207 +1,20 @@
 import { Product, Contact, CustomerGroup, Purchase, PurchaseReturn, Sale, SalesReturn, StockTransfer, Expense, BusinessSettings, InvoiceSettings } from '../types';
 
-export const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: "prod-1",
-    name: "Wireless Barcode Scanner Pro",
-    sku: "WBS-902",
-    category: "POS Hardware",
-    businessLocation: "Main Branch",
-    unitPurchasePrice: 42.50,
-    sellingPrice: 79.99,
-    currentStock: 48,
-    alertQuantity: 10,
-    imageUrl: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-08-14"
-  },
-  {
-    id: "prod-2",
-    name: "Thermal Receipt Paper Roll (80mm)",
-    sku: "TRP-80-50",
-    category: "Supplies",
-    businessLocation: "Main Branch",
-    unitPurchasePrice: 1.10,
-    sellingPrice: 2.50,
-    currentStock: 320,
-    alertQuantity: 50,
-    imageUrl: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-08-20"
-  },
-  {
-    id: "prod-3",
-    name: "Ergonomic Mechanical Keyboard",
-    sku: "EMK-RGB-01",
-    category: "Peripherals",
-    businessLocation: "Westside Hub",
-    unitPurchasePrice: 65.00,
-    sellingPrice: 119.00,
-    currentStock: 18,
-    alertQuantity: 5,
-    imageUrl: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-01"
-  },
-  {
-    id: "prod-4",
-    name: "Heavy Duty Cash Drawer (RJ11)",
-    sku: "CDR-410",
-    category: "POS Hardware",
-    businessLocation: "Main Branch",
-    unitPurchasePrice: 48.00,
-    sellingPrice: 89.50,
-    currentStock: 12,
-    alertQuantity: 5,
-    imageUrl: "https://images.unsplash.com/photo-1556742049-0a67e557224f?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-05"
-  },
-  {
-    id: "prod-5",
-    name: "Omnidirectional 2D Desktop Scanner",
-    sku: "OMN-200",
-    category: "POS Hardware",
-    businessLocation: "Downtown Store",
-    unitPurchasePrice: 110.00,
-    sellingPrice: 185.00,
-    currentStock: 7,
-    alertQuantity: 8,
-    imageUrl: "https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-12"
-  },
-  {
-    id: "prod-6",
-    name: "High-Speed USB Thermal Printer 80mm",
-    sku: "TP-803",
-    category: "POS Hardware",
-    businessLocation: "Main Branch",
-    unitPurchasePrice: 85.00,
-    sellingPrice: 149.00,
-    currentStock: 24,
-    alertQuantity: 6,
-    imageUrl: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-15"
-  },
-  {
-    id: "prod-7",
-    name: "Industrial Precision Weighing Scale",
-    sku: "IPS-30KG",
-    category: "Equipment",
-    businessLocation: "Westside Hub",
-    unitPurchasePrice: 140.00,
-    sellingPrice: 230.00,
-    currentStock: 9,
-    alertQuantity: 4,
-    imageUrl: "https://images.unsplash.com/photo-1534972195531-a756b112697a?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-18"
-  },
-  {
-    id: "prod-8",
-    name: "Laser Barcode Label Sheets (100pk)",
-    sku: "LBL-100",
-    category: "Supplies",
-    businessLocation: "Downtown Store",
-    unitPurchasePrice: 6.20,
-    sellingPrice: 14.50,
-    currentStock: 85,
-    alertQuantity: 20,
-    imageUrl: "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=120&h=120&q=80",
-    createdAt: "2026-09-22"
-  }
-];
+export const INITIAL_PRODUCTS: Product[] = [];
 
-export const INITIAL_SUPPLIERS: Contact[] = [
-  {
-    id: "sup-1",
-    type: "supplier",
-    name: "Marcus Vance",
-    businessName: "Northstar Electronics Ltd",
-    email: "procurement@northstarelec.com",
-    phone: "+1 (555) 392-8190",
-    businessLocation: "Main Branch",
-    taxNumber: "TAX-US-993821",
-    creditLimit: 25000,
-    balance: 4200.00,
-    address: "482 Industrial Parkway, Austin, TX"
-  },
-  {
-    id: "sup-2",
-    type: "supplier",
-    name: "Elena Rostova",
-    businessName: "Pacific Paper & Packaging Co",
-    email: "orders@pacificpackaging.com",
-    phone: "+1 (555) 748-2918",
-    businessLocation: "Downtown Store",
-    taxNumber: "TAX-US-102938",
-    creditLimit: 15000,
-    balance: 1850.00,
-    address: "109 Harbour Blvd, Seattle, WA"
-  },
-  {
-    id: "sup-3",
-    type: "supplier",
-    name: "David Kim",
-    businessName: "Apex Hardware Global",
-    email: "supply@apexglobal.tech",
-    phone: "+1 (555) 482-0193",
-    businessLocation: "Westside Hub",
-    taxNumber: "TAX-US-849201",
-    creditLimit: 40000,
-    balance: 2800.00,
-    address: "710 Commerce Drive, San Jose, CA"
-  }
-];
+export const INITIAL_SUPPLIERS: Contact[] = [];
 
 export const INITIAL_CUSTOMERS: Contact[] = [
   {
     id: "cust-walkin",
     type: "customer",
-    name: "Walk-in Customer",
-    email: "retail-walkin@store.local",
-    phone: "N/A",
+    name: "Walk-in Customer (খুচরা ক্রেতা)",
+    email: "",
+    phone: "01700000000",
     customerGroup: "Retail",
-    businessLocation: "Main Branch",
+    businessLocation: "Hazigonj Branch",
     balance: 0.00,
-    totalPurchases: 42800.00
-  },
-  {
-    id: "cust-1",
-    type: "customer",
-    name: "Sarah Jenkins",
-    businessName: "Jenkins Retail Outlets",
-    email: "sarah.j@jenkinsretail.com",
-    phone: "+1 (555) 892-4410",
-    customerGroup: "Wholesale Partner",
-    businessLocation: "Main Branch",
-    creditLimit: 10000,
-    balance: 3400.00,
-    totalPurchases: 28450.00,
-    address: "940 Market Way, Denver, CO"
-  },
-  {
-    id: "cust-2",
-    type: "customer",
-    name: "Robert Chang",
-    businessName: "OmniTech Solutions Inc",
-    email: "rchang@omnitech.org",
-    phone: "+1 (555) 671-2290",
-    customerGroup: "VIP Tier",
-    businessLocation: "Downtown Store",
-    creditLimit: 20000,
-    balance: 6200.00,
-    totalPurchases: 54100.00,
-    address: "220 Tech Ridge Rd, Phoenix, AZ"
-  },
-  {
-    id: "cust-3",
-    type: "customer",
-    name: "Amina Al-Mansoor",
-    businessName: "Crescent Point Logistics",
-    email: "amina@crescentlogistics.com",
-    phone: "+1 (555) 913-0941",
-    customerGroup: "VIP Tier",
-    businessLocation: "Westside Hub",
-    creditLimit: 15000,
-    balance: 5930.00,
-    totalPurchases: 39900.00,
-    address: "512 Cargo Loop, Dallas, TX"
+    totalPurchases: 0.00
   }
 ];
 
@@ -211,44 +24,7 @@ export const INITIAL_CUSTOMER_GROUPS: CustomerGroup[] = [
   { id: "cg-3", name: "Wholesale Partner", calculationPercentage: 15, sellingPriceGroup: "Wholesale Tier 1" }
 ];
 
-export const INITIAL_PURCHASES: Purchase[] = [
-  {
-    id: "pur-1",
-    purchaseNo: "PO-2026-881",
-    supplierName: "Northstar Electronics Ltd",
-    businessLocation: "Main Branch",
-    purchaseStatus: "Received",
-    paymentStatus: "Paid",
-    purchaseDate: "2026-09-28",
-    grandTotal: 4250.00,
-    paymentDue: 0.00,
-    itemsCount: 50
-  },
-  {
-    id: "pur-2",
-    purchaseNo: "PO-2026-882",
-    supplierName: "Pacific Paper & Packaging Co",
-    businessLocation: "Downtown Store",
-    purchaseStatus: "Received",
-    paymentStatus: "Partial",
-    purchaseDate: "2026-09-30",
-    grandTotal: 1850.00,
-    paymentDue: 850.00,
-    itemsCount: 1200
-  },
-  {
-    id: "pur-3",
-    purchaseNo: "PO-2026-883",
-    supplierName: "Apex Hardware Global",
-    businessLocation: "Westside Hub",
-    purchaseStatus: "Pending",
-    paymentStatus: "Due",
-    purchaseDate: "2026-10-02",
-    grandTotal: 8000.00,
-    paymentDue: 8000.00,
-    itemsCount: 65
-  }
-];
+export const INITIAL_PURCHASES: Purchase[] = [];
 
 export const INITIAL_PURCHASE_RETURNS: PurchaseReturn[] = [];
 
@@ -260,59 +36,30 @@ export const INITIAL_STOCK_TRANSFERS: StockTransfer[] = [];
 
 export const INITIAL_EXPENSES: Expense[] = [];
 
-// 30 Days of sales trend data for the line chart
-export const SALES_LAST_30_DAYS = [
-  { day: "Sep 05", date: "2026-09-05", amount: 4850 },
-  { day: "Sep 06", date: "2026-09-06", amount: 5120 },
-  { day: "Sep 07", date: "2026-09-07", amount: 4690 },
-  { day: "Sep 08", date: "2026-09-08", amount: 6200 },
-  { day: "Sep 09", date: "2026-09-09", amount: 5800 },
-  { day: "Sep 10", date: "2026-09-10", amount: 7450 },
-  { day: "Sep 11", date: "2026-09-11", amount: 8100 },
-  { day: "Sep 12", date: "2026-09-12", amount: 6400 },
-  { day: "Sep 13", date: "2026-09-13", amount: 5900 },
-  { day: "Sep 14", date: "2026-09-14", amount: 6720 },
-  { day: "Sep 15", date: "2026-09-15", amount: 7300 },
-  { day: "Sep 16", date: "2026-09-16", amount: 6150 },
-  { day: "Sep 17", date: "2026-09-17", amount: 5400 },
-  { day: "Sep 18", date: "2026-09-18", amount: 6890 },
-  { day: "Sep 19", date: "2026-09-19", amount: 8400 },
-  { day: "Sep 20", date: "2026-09-20", amount: 9150 },
-  { day: "Sep 21", date: "2026-09-21", amount: 7600 },
-  { day: "Sep 22", date: "2026-09-22", amount: 6300 },
-  { day: "Sep 23", date: "2026-09-23", amount: 5800 },
-  { day: "Sep 24", date: "2026-09-24", amount: 7200 },
-  { day: "Sep 25", date: "2026-09-25", amount: 8900 },
-  { day: "Sep 26", date: "2026-09-26", amount: 9600 },
-  { day: "Sep 27", date: "2026-09-27", amount: 8200 },
-  { day: "Sep 28", date: "2026-09-28", amount: 7100 },
-  { day: "Sep 29", date: "2026-09-29", amount: 6850 },
-  { day: "Sep 30", date: "2026-09-30", amount: 7900 },
-  { day: "Oct 01", date: "2026-10-01", amount: 8400 },
-  { day: "Oct 02", date: "2026-10-02", amount: 9200 },
-  { day: "Oct 03", date: "2026-10-03", amount: 10450 },
-  { day: "Oct 04", date: "2026-10-04", amount: 8750 }
-];
+// 30 Days of sales trend data for the line chart (dynamically computed from real sales in UI)
+export const SALES_LAST_30_DAYS: { day: string; date: string; amount: number }[] = [];
 
 export const INITIAL_BUSINESS_SETTINGS: BusinessSettings = {
-  businessName: "Apex Retail Solutions Inc.",
-  taxNumber: "US-EIN-94-381902",
-  defaultCurrency: "USD ($)",
-  currencySymbol: "$",
-  financialYearStart: "January",
-  defaultTaxRate: 8.5,
-  primaryLocation: "Main Branch",
-  contactEmail: "support@apexpos.internal",
-  contactPhone: "+1 (800) 555-APEX",
-  address: "1000 Commercial Boulevard, Suite 400, Chicago, IL 60601"
+  businessName: "TAMANNA MOTORS",
+  taxNumber: "BIN-002849102-0101",
+  defaultCurrency: "BDT (৳)",
+  currencySymbol: "৳",
+  financialYearStart: "July",
+  defaultTaxRate: 5.0,
+  primaryLocation: "Hazigonj Branch",
+  contactEmail: "tamannamotors.bd@gmail.com",
+  contactPhone: "01626666906, 01878934956",
+  address: "HAZIGONJ-KACHUA MAIN ROAD, WEST BAZAR, HAZIGONJ, CHANDPUR.",
+  logoUrl: ""
 };
 
 export const INITIAL_INVOICE_SETTINGS: InvoiceSettings = {
-  invoicePrefix: "INV-2026-",
-  termsAndConditions: "Goods once sold can be returned within 14 days with original receipt in undamaged condition. Software and licenses are non-refundable.",
+  invoicePrefix: "TM-2026-",
+  termsAndConditions: "১. বিক্রিত মাল ১৪ দিনের মধ্যে অক্ষত অবস্থায় ক্যাশ মেমোসহ পরিবর্তনযোগ্য। ২. ইলেকট্রিক্যাল ও ব্যাটারি আইটেমে প্রস্তুতকারকের শর্ত প্রযোজ্য।",
   showLogo: true,
-  paperSize: "80mm",
-  footerNotes: "Thank you for shopping with Apex Retail! Follow us @ApexRetail or visit apexpos.internal."
+  paperSize: "A4",
+  footerNotes: "তামান্না মোটরসে কেনাকাটার জন্য আন্তরিক ধন্যবাদ! ১০০% জেনুইন পার্টসের বিশ্বস্ত প্রতিষ্ঠান।",
+  logoUrl: ""
 };
 
 export interface MonthlySalesData {
@@ -328,126 +75,6 @@ export interface MonthlySalesData {
   ordersCount: number; // Number of invoices
 }
 
-export const MONTHLY_SALES_PERFORMANCE: MonthlySalesData[] = [
-  {
-    month: "Jan",
-    monthBn: "জানু",
-    fullMonth: "January 2026",
-    current2026: 385000,
-    previous2025: 310000,
-    prevMonthSales: 360000,
-    target: 370000,
-    momGrowth: 6.9,
-    yoyGrowth: 24.2,
-    ordersCount: 420
-  },
-  {
-    month: "Feb",
-    monthBn: "ফেব্রু",
-    fullMonth: "February 2026",
-    current2026: 412000,
-    previous2025: 328000,
-    prevMonthSales: 385000,
-    target: 400000,
-    momGrowth: 7.0,
-    yoyGrowth: 25.6,
-    ordersCount: 455
-  },
-  {
-    month: "Mar",
-    monthBn: "মার্চ",
-    fullMonth: "March 2026",
-    current2026: 468000,
-    previous2025: 375000,
-    prevMonthSales: 412000,
-    target: 450000,
-    momGrowth: 13.6,
-    yoyGrowth: 24.8,
-    ordersCount: 512
-  },
-  {
-    month: "Apr",
-    monthBn: "এপ্রিল",
-    fullMonth: "April 2026",
-    current2026: 524000,
-    previous2025: 420000,
-    prevMonthSales: 468000,
-    target: 500000,
-    momGrowth: 12.0,
-    yoyGrowth: 24.8,
-    ordersCount: 580
-  },
-  {
-    month: "May",
-    monthBn: "মে",
-    fullMonth: "May 2026",
-    current2026: 485000,
-    previous2025: 395000,
-    prevMonthSales: 524000,
-    target: 480000,
-    momGrowth: -7.4,
-    yoyGrowth: 22.8,
-    ordersCount: 530
-  },
-  {
-    month: "Jun",
-    monthBn: "জুন",
-    fullMonth: "June 2026",
-    current2026: 518000,
-    previous2025: 415000,
-    prevMonthSales: 485000,
-    target: 510000,
-    momGrowth: 6.8,
-    yoyGrowth: 24.8,
-    ordersCount: 565
-  },
-  {
-    month: "Jul",
-    monthBn: "জুলাই",
-    fullMonth: "July 2026",
-    current2026: 545000,
-    previous2025: 435000,
-    prevMonthSales: 518000,
-    target: 530000,
-    momGrowth: 5.2,
-    yoyGrowth: 25.3,
-    ordersCount: 595
-  },
-  {
-    month: "Aug",
-    monthBn: "আগস্ট",
-    fullMonth: "August 2026",
-    current2026: 592000,
-    previous2025: 470000,
-    prevMonthSales: 545000,
-    target: 560000,
-    momGrowth: 8.6,
-    yoyGrowth: 26.0,
-    ordersCount: 640
-  },
-  {
-    month: "Sep",
-    monthBn: "সেপ্টে",
-    fullMonth: "September 2026",
-    current2026: 628000,
-    previous2025: 498000,
-    prevMonthSales: 592000,
-    target: 600000,
-    momGrowth: 6.1,
-    yoyGrowth: 26.1,
-    ordersCount: 685
-  },
-  {
-    month: "Oct",
-    monthBn: "অক্টো",
-    fullMonth: "October 2026 (MTD)",
-    current2026: 655000,
-    previous2025: 512000,
-    prevMonthSales: 628000,
-    target: 630000,
-    momGrowth: 4.3,
-    yoyGrowth: 27.9,
-    ordersCount: 710
-  }
-];
+export const MONTHLY_SALES_PERFORMANCE: MonthlySalesData[] = [];
+
 

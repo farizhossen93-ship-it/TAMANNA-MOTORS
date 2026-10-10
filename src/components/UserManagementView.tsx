@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   UserCheck,
   UserX,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { DataTable, Column } from './DataTable';
 import { Language, TRANSLATIONS } from '../i18n/translations';
@@ -48,7 +49,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('cashier');
   const [location, setLocation] = useState('Hazigonj Branch');
-  const [status, setStatus] = useState<'Active' | 'Suspended' | 'Pending Approval'>('Active');
+  const [status, setStatus] = useState<'Active' | 'Suspended' | 'Pending Approval' | 'Pending Verification'>('Active');
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -260,11 +261,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     {
       header: lang === 'bn' ? 'লগইন পাসওয়ার্ড' : 'Login Password',
       accessorKey: 'password',
-      cell: (row) => (
+      cell: (row) => currentUser?.role === 'super_admin' ? (
         <div className="flex items-center gap-1 font-mono text-[11px] text-slate-500">
           <Key className="h-3 w-3 text-amber-500 shrink-0" />
           <span>{row.password || 'password123'}</span>
         </div>
+      ) : (
+        <span className="text-[11px] text-slate-400 font-mono italic">••••••••</span>
       )
     },
     {
@@ -307,6 +310,24 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       cell: (row) => <span className="font-mono text-[11px] text-slate-500">{row.lastLogin || 'Never'}</span>
     }
   ];
+
+  if (currentUser?.role !== 'super_admin') {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
+        <div className="max-w-md w-full rounded-3xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 p-8 backdrop-blur-2xl shadow-2xl">
+          <ShieldAlert className="h-12 w-12 text-rose-500 mx-auto mb-3" />
+          <h3 className="text-base font-black text-slate-900 dark:text-white mb-2">
+            {lang === 'bn' ? 'শুধুমাত্র সুপার অ্যাডমিনের জন্য' : 'Super Admin Access Only'}
+          </h3>
+          <p className="text-xs text-slate-600 dark:text-slate-300">
+            {lang === 'bn'
+              ? 'ইউজার ম্যানেজমেন্ট ও স্টাফ নিয়ন্ত্রণ শুধুমাত্র সুপার অ্যাডমিনের জন্য সংরক্ষিত।'
+              : 'User management is strictly restricted to Super Admin only.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -463,11 +484,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                   </label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as 'Active' | 'Suspended')}
+                    onChange={(e) => setStatus(e.target.value as any)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden"
                   >
                     <option value="Active">{lang === 'bn' ? 'সক্রিয় (Active)' : 'Active'}</option>
                     <option value="Suspended">{lang === 'bn' ? 'স্থগিত (Suspended)' : 'Suspended'}</option>
+                    <option value="Pending Verification">{lang === 'bn' ? 'ইমেইল যাচাই অপেক্ষমান (Pending Verification)' : 'Pending Verification'}</option>
+                    <option value="Pending Approval">{lang === 'bn' ? 'অনুমোদন অপেক্ষমান (Pending Approval)' : 'Pending Approval'}</option>
                   </select>
                 </div>
               </div>

@@ -48,7 +48,6 @@ import { SettingsView } from './components/SettingsView';
 import { ReportsView } from './components/ReportsView';
 import { UserManagementView } from './components/UserManagementView';
 import { SyncedDuesView } from './components/SyncedDuesView';
-import { DatabaseControlView } from './components/DatabaseControlView';
 import { SupabaseSync } from './data/supabaseSync';
 import { FirestoreSync } from './data/firestoreSync';
 import { ReceiptModal } from './components/ReceiptModal';
@@ -94,6 +93,9 @@ export default function App() {
   };
 
   const handleToggleUserRole = (newRole: UserRole) => {
+    if (currentUser?.role !== 'super_admin') {
+      return;
+    }
     setUserRole(newRole);
     DatabaseStorage.saveActiveRole(newRole);
   };
@@ -145,11 +147,43 @@ export default function App() {
     DatabaseStorage.saveInvoiceSettings(invoiceSettings);
   }, [invoiceSettings]);
 
+  // One-time cleanup of any legacy mock products/purchases/suppliers from browser storage
+  useEffect(() => {
+    try {
+      const mockProductIds = new Set(['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7', 'prod-8']);
+      setProducts(prev => {
+        const filtered = prev.filter(p => !mockProductIds.has(p.id) && !p.sku?.startsWith('MOT-') && !p.sku?.startsWith('WBS-'));
+        if (filtered.length !== prev.length) {
+          DatabaseStorage.saveProducts(filtered);
+        }
+        return filtered;
+      });
+
+      const mockSupplierIds = new Set(['sup-1', 'sup-2', 'sup-3']);
+      setSuppliers(prev => {
+        const filtered = prev.filter(s => !mockSupplierIds.has(s.id));
+        if (filtered.length !== prev.length) {
+          DatabaseStorage.saveSuppliers(filtered);
+        }
+        return filtered;
+      });
+
+      const mockPurchaseIds = new Set(['pur-1', 'pur-2', 'pur-3']);
+      setPurchases(prev => {
+        const filtered = prev.filter(p => !mockPurchaseIds.has(p.id) && !p.purchaseNo?.startsWith('PO-2026-88'));
+        if (filtered.length !== prev.length) {
+          DatabaseStorage.savePurchases(filtered);
+        }
+        return filtered;
+      });
+    } catch {}
+  }, []);
+
   // Load live data from Cloud SQL PostgreSQL backend API and Supabase on startup
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
-        const [prodRes, saleRes, contactRes, userRes, sbProds, sbSales, sbContacts] = await Promise.allSettled([
+        const [prodRes, saleRes, contactRes, userRes, sbProds, sbSales, sbContacts, sbUsers, sbPurchases, sbExpenses] = await Promise.allSettled([
           fetch('/api/products').then(r => r.ok ? r.json() : null),
           fetch('/api/sales').then(r => r.ok ? r.json() : null),
           fetch('/api/contacts').then(r => r.ok ? r.json() : null),
@@ -157,7 +191,22 @@ export default function App() {
           SupabaseSync.fetchProducts(),
           SupabaseSync.fetchSales(),
           SupabaseSync.fetchContacts(),
+          SupabaseSync.fetchUsers(),
+          SupabaseSync.fetchPurchases(),
+          SupabaseSync.fetchExpenses(),
         ]);
+
+        if (sbUsers.status === 'fulfilled' && Array.isArray(sbUsers.value) && sbUsers.value.length > 0) {
+          setStaffUsers(prev => {
+            const merged = [...prev];
+            for (const u of sbUsers.value!) {
+              if (!merged.some(c => c.username?.toLowerCase() === u.username?.toLowerCase())) {
+                merged.push(u);
+              }
+            }
+            return merged;
+          });
+        }
 
         if (userRes.status === 'fulfilled' && Array.isArray(userRes.value) && userRes.value.length > 0) {
           const mappedUsers: AuthUser[] = userRes.value.map((u: any) => ({
@@ -170,6 +219,7 @@ export default function App() {
             role: u.role || 'cashier',
             businessLocation: u.businessLocation || 'Hazigonj Branch',
             status: u.status || 'Active',
+            emailVerified: Boolean(u.email_verified || u.emailVerified),
             lastLogin: u.lastLogin || 'Never'
           }));
           setStaffUsers(mappedUsers);
@@ -198,6 +248,14 @@ export default function App() {
           const sups = sbContacts.value.filter((c: any) => c.type === 'supplier');
           if (custs.length > 0) setCustomers(custs);
           if (sups.length > 0) setSuppliers(sups);
+        }
+
+        if (sbPurchases.status === 'fulfilled' && Array.isArray(sbPurchases.value) && sbPurchases.value.length > 0) {
+          setPurchases(sbPurchases.value);
+        }
+
+        if (sbExpenses.status === 'fulfilled' && Array.isArray(sbExpenses.value) && sbExpenses.value.length > 0) {
+          setExpenses(sbExpenses.value);
         }
         const [fsProds, fsSales, fsContacts, fsUsers] = await Promise.all([
           FirestoreSync.fetchProducts(),
@@ -433,17 +491,17 @@ export default function App() {
     showSyncNotice(lang === 'bn' ? `'${user.name}' হিসেবে সফলভাবে লগইন হয়েছে` : `Successfully signed in as '${user.name}'`);
   };
 
-  const handleRegister = (newUser: AuthUser, autoLogin: boolean = true) => {
+  const handleRegister = (newUser: AuthUser, autoLogin: boolean = false) => {
     const exists = staffUsers.some(u => u.username.toLowerCase() === newUser.username.toLowerCase());
     const next = exists
       ? staffUsers.map(u => u.username.toLowerCase() === newUser.username.toLowerCase() ? newUser : u)
       : [...staffUsers, newUser];
     handleUpdateStaffUsers(next);
     SupabaseSync.upsertUser(newUser);
-    if (autoLogin || newUser.role === 'super_admin') {
+    if (autoLogin && newUser.emailVerified) {
       handleLogin(newUser);
     } else {
-      showSyncNotice(lang === 'bn' ? 'নিবন্ধন সফল হয়েছে। সুপার অ্যাডমিন অনুমোদনের পর সাইন ইন করুন।' : 'Registration successful. Awaiting Super Admin approval.');
+      showSyncNotice(lang === 'bn' ? 'অ্যাকাউন্ট তৈরি হয়েছে! অনুগ্রহ করে লগইন করার আগে ইমেইল ভেরিফাই করুন।' : 'Account created! Please verify your email before logging in.');
     }
   };
 
@@ -680,6 +738,7 @@ export default function App() {
       body: JSON.stringify(expense)
     }).catch(console.error);
     FirestoreSync.upsertExpense(expense);
+    SupabaseSync.upsertExpense(expense);
     showSyncNotice(lang === 'bn' ? `ব্যয় ভাউচার '${expense.expenseNo}' যুক্ত ও সিঙ্ক হয়েছে।` : `Expense '${expense.expenseNo}' added and synced.`);
   };
 
@@ -694,6 +753,7 @@ export default function App() {
     DatabaseStorage.saveExpenses(updated);
     fetch(`/api/expenses/${row.id}`, { method: 'DELETE' }).catch(console.error);
     FirestoreSync.deleteExpense(row.id);
+    SupabaseSync.deleteExpense(row.id);
     showSyncNotice(lang === 'bn' ? `ব্যয় '${row.expenseNo}' মুছে ফেলা হয়েছে।` : `Expense '${row.expenseNo}' deleted and synced.`);
   };
 
@@ -708,6 +768,7 @@ export default function App() {
       body: JSON.stringify(purchase)
     }).catch(console.error);
     FirestoreSync.upsertPurchase(purchase);
+    SupabaseSync.upsertPurchase(purchase);
     showSyncNotice(lang === 'bn' ? `ক্রয় চালান '${purchase.purchaseNo}' যুক্ত ও সিঙ্ক হয়েছে।` : `Purchase order '${purchase.purchaseNo}' added and synced.`);
   };
 
@@ -722,6 +783,7 @@ export default function App() {
     DatabaseStorage.savePurchases(updated);
     fetch(`/api/purchases/${row.id}`, { method: 'DELETE' }).catch(console.error);
     FirestoreSync.deletePurchase(row.id);
+    SupabaseSync.deletePurchase(row.id);
     showSyncNotice(lang === 'bn' ? `ক্রয় অর্ডার '${row.purchaseNo}' মুছে ফেলা হয়েছে।` : `Purchase order deleted and synced.`);
   };
 
@@ -782,12 +844,15 @@ export default function App() {
 
     if (editingEntry.type === 'sale') {
       setSales(prev => prev.map(s => s.id === updatedEntry.id ? updatedEntry : s));
+      SupabaseSync.upsertSale(updatedEntry);
       showSyncNotice(lang === 'bn' ? `বিক্রয় চালান '${updatedEntry.invoiceNo}' হালনাগাদ ও সিঙ্ক হয়েছে।` : `Sale invoice '${updatedEntry.invoiceNo}' updated and synced.`);
     } else if (editingEntry.type === 'purchase') {
       setPurchases(prev => prev.map(p => p.id === updatedEntry.id ? updatedEntry : p));
+      SupabaseSync.upsertPurchase(updatedEntry);
       showSyncNotice(lang === 'bn' ? `ক্রয় চালান '${updatedEntry.purchaseNo}' হালনাগাদ ও সিঙ্ক হয়েছে।` : `Purchase order '${updatedEntry.purchaseNo}' updated and synced.`);
     } else if (editingEntry.type === 'expense') {
       setExpenses(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e));
+      SupabaseSync.upsertExpense(updatedEntry);
       showSyncNotice(lang === 'bn' ? `ব্যয় ভাউচার '${updatedEntry.expenseNo}' হালনাগাদ ও সিঙ্ক হয়েছে।` : `Expense '${updatedEntry.expenseNo}' updated and synced.`);
     }
 
@@ -797,7 +862,9 @@ export default function App() {
   const handleQuickRestock = (productId: string, quantity: number) => {
     setProducts(prev => prev.map(p => {
       if (p.id === productId) {
-        return { ...p, currentStock: p.currentStock + quantity };
+        const updated = { ...p, currentStock: p.currentStock + quantity };
+        SupabaseSync.upsertProduct(updated);
+        return updated;
       }
       return p;
     }));
@@ -837,6 +904,7 @@ export default function App() {
     fetch('/api/sales', { method: 'DELETE' }).catch(err => console.error(err));
     fetch('/api/expenses', { method: 'DELETE' }).catch(err => console.error(err));
     fetch('/api/purchases', { method: 'DELETE' }).catch(err => console.error(err));
+    fetch('/api/contacts', { method: 'DELETE' }).catch(err => console.error(err));
     
     await Promise.allSettled([
       FirestoreSync.clearCollection('products'),
@@ -844,8 +912,13 @@ export default function App() {
       FirestoreSync.clearCollection('purchases'),
       FirestoreSync.clearCollection('expenses'),
       FirestoreSync.clearCollection('contacts'),
+      SupabaseSync.deleteAllProducts(),
+      SupabaseSync.deleteAllSales(),
+      SupabaseSync.deleteAllPurchases(),
+      SupabaseSync.deleteAllExpenses(),
+      SupabaseSync.deleteAllContacts()
     ]);
-    showSyncNotice(lang === 'bn' ? 'সকল ডেটা ফায়ারবেস অনলাইন ক্লাউড ও সিস্টেম থেকে সম্পূর্ণভাবে মুছে ফেলা হয়েছে।' : 'All products and temporary data cleared from Firebase Cloud successfully.');
+    showSyncNotice(lang === 'bn' ? 'সকল মক ডেটা সফলভাবে মুছে ফেলা হয়েছে। আপনি আপনার ডেটা যোগ করতে প্রস্তুত।' : 'All mock data cleared from Cloud & Database successfully.');
   };
 
   const handleRefreshDatabase = () => {
@@ -1135,6 +1208,8 @@ export default function App() {
             }}
             products={products}
             sales={sales}
+            purchases={purchases}
+            expenses={expenses}
             lang={lang}
             userRole={userRole}
             onQuickRestock={handleQuickRestock}
@@ -1142,6 +1217,31 @@ export default function App() {
         );
 
       case 'user-management':
+        if (currentUser?.role !== 'super_admin') {
+          return (
+            <div className="flex flex-col items-center justify-center p-6 sm:p-12 text-center min-h-[450px]">
+              <div className="max-w-md w-full rounded-3xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 p-8 backdrop-blur-2xl shadow-2xl">
+                <div className="h-14 w-14 rounded-2xl bg-rose-500/20 text-rose-500 mx-auto flex items-center justify-center mb-4 ring-8 ring-rose-500/10">
+                  <ShieldAlert className="h-7 w-7" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">
+                  {lang === 'bn' ? 'অনুমতি সংরক্ষিত (Access Restricted)' : 'Super Admin Access Only'}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+                  {lang === 'bn'
+                    ? 'ইউজার ম্যানেজমেন্ট ও স্টাফ নিয়ন্ত্রণ ব্যবস্থা শুধুমাত্র সুপার অ্যাডমিন (Super Admin)-এর জন্য সংরক্ষিত।'
+                    : 'User Management and Staff Access Control is strictly restricted to Super Admin accounts only.'}
+                </p>
+                <button
+                  onClick={() => setCurrentRoute('home')}
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                >
+                  {lang === 'bn' ? 'ড্যাশবোর্ডে ফিরে যান' : 'Return to Dashboard'}
+                </button>
+              </div>
+            </div>
+          );
+        }
         return (
           <UserManagementView
             users={staffUsers}
@@ -1613,11 +1713,6 @@ export default function App() {
             onClearTempData={handleClearTempSales}
             onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
-            onRestoreCatalog={() => {
-              setProducts(INITIAL_TAMANNA_PRODUCTS);
-              DatabaseStorage.saveProducts(INITIAL_TAMANNA_PRODUCTS);
-              showSyncNotice(lang === 'bn' ? 'ডিফল্ট পার্টস ক্যাটালগ সফলভাবে রিস্টোর করা হয়েছে!' : 'Default Tamanna Motors catalog restored successfully!');
-            }}
           />
         );
 
@@ -1634,40 +1729,20 @@ export default function App() {
             onClearTempData={handleClearTempSales}
             onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
-            onRestoreCatalog={() => {
-              setProducts(INITIAL_TAMANNA_PRODUCTS);
-              DatabaseStorage.saveProducts(INITIAL_TAMANNA_PRODUCTS);
-              showSyncNotice(lang === 'bn' ? 'ডিফল্ট পার্টস ক্যাটালগ সফলভাবে রিস্টোর করা হয়েছে!' : 'Default Tamanna Motors catalog restored successfully!');
-            }}
           />
         );
 
       case 'cloud-database':
+        // Hide completely from regular operators/customers; redirect to Dashboard
         return (
-          <DatabaseControlView
+          <DashboardView
+            onOpenPos={() => setIsPosOpen(true)}
+            onNavigate={setCurrentRoute}
             products={products}
             sales={sales}
-            contacts={[...customers, ...suppliers]}
-            businessSettings={businessSettings}
             lang={lang}
-            onRefreshAll={() => {
-              fetch('/api/products').then(r => r.json()).then(setProducts).catch(console.error);
-              fetch('/api/sales').then(r => r.json()).then(setSales).catch(console.error);
-              fetch('/api/contacts').then(r => r.json()).then(data => {
-                if (Array.isArray(data)) {
-                  setCustomers(data.filter((c: any) => c.type === 'customer'));
-                  setSuppliers(data.filter((c: any) => c.type === 'supplier'));
-                }
-              }).catch(console.error);
-            }}
-            onApplySupabaseData={(data) => {
-              if (data.products) setProducts(data.products);
-              if (data.sales) setSales(data.sales);
-              if (data.contacts) {
-                setCustomers(data.contacts.filter(c => c.type === 'customer'));
-                setSuppliers(data.contacts.filter(c => c.type === 'supplier'));
-              }
-            }}
+            userRole={userRole}
+            onQuickRestock={handleQuickRestock}
           />
         );
 
@@ -1704,11 +1779,17 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans transition-colors duration-150">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans transition-colors duration-150 relative">
+      {/* Subtle ambient glass mesh glow in dark mode */}
+      <div className="fixed top-0 left-1/3 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed bottom-0 right-10 w-[500px] h-[300px] bg-cyan-500/5 dark:bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
       {/* 2. Left Navigation Sidebar */}
       <Sidebar
         currentRoute={currentRoute}
         onNavigate={(route) => {
+          if (route === 'user-management' && currentUser?.role !== 'super_admin') {
+            return;
+          }
           if (route === 'products-add') {
             setIsAddProductOpen(true);
           } else if (route === 'purchase-add') {
@@ -1726,7 +1807,8 @@ export default function App() {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         lang={lang}
         businessSettings={businessSettings}
-        userRole={currentUser?.role || userRole}
+        userRole={currentUser?.role === 'super_admin' ? userRole : (currentUser?.role || 'cashier')}
+        currentUser={currentUser}
       />
 
       {/* Main Container */}
@@ -1745,9 +1827,9 @@ export default function App() {
           lang={lang}
           onToggleLang={handleToggleLang}
           businessSettings={businessSettings}
-          userRole={userRole}
-          onToggleUserRole={handleToggleUserRole}
-          onPutNewEntry={handlePutNewEntry}
+          userRole={currentUser?.role === 'super_admin' ? userRole : (currentUser?.role || 'cashier')}
+          onToggleUserRole={currentUser?.role === 'super_admin' ? handleToggleUserRole : undefined}
+          onPutNewEntry={currentUser?.role === 'super_admin' ? handlePutNewEntry : undefined}
           currentUser={currentUser}
           onLogout={handleLogout}
           onOpenInvoiceScanner={() => setIsInvoiceScanOpen(true)}
@@ -1756,7 +1838,7 @@ export default function App() {
         />
 
         {/* 3. Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-8">
           <div className="mx-auto max-w-7xl">
             {renderMainContent()}
           </div>
@@ -1804,16 +1886,7 @@ export default function App() {
           invoiceNo={viewingReceiptSale.invoiceNo}
           customerName={viewingReceiptSale.customerName}
           customerPhone={viewingReceiptSale.customerPhone}
-          items={viewingReceiptSale.items && viewingReceiptSale.items.length > 0 ? viewingReceiptSale.items : [
-            {
-              product: products[0] || INITIAL_TAMANNA_PRODUCTS[0],
-              quantity: Math.max(1, Math.round(viewingReceiptSale.itemsCount * 0.6)),
-            },
-            {
-              product: products[1] || INITIAL_TAMANNA_PRODUCTS[1],
-              quantity: Math.max(1, Math.round(viewingReceiptSale.itemsCount * 0.4)),
-            }
-          ]}
+          items={viewingReceiptSale.items && viewingReceiptSale.items.length > 0 ? viewingReceiptSale.items : []}
           subtotal={viewingReceiptSale.subtotal ?? (viewingReceiptSale.totalAmount / 1.05)}
           taxAmount={viewingReceiptSale.taxAmount ?? (viewingReceiptSale.totalAmount - (viewingReceiptSale.totalAmount / 1.05))}
           discountAmount={viewingReceiptSale.discountAmount ?? 0}
