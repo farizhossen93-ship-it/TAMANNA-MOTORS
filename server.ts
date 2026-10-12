@@ -57,7 +57,13 @@ app.post('/api/auth/sync-user', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   try {
     const allProducts = await db.select().from(schema.products);
-    res.json(allProducts);
+    res.json(allProducts.map(p => ({
+      ...p,
+      unitPurchasePrice: Number(p.unitPurchasePrice || 0),
+      sellingPrice: Number(p.sellingPrice || 0),
+      currentStock: Number(p.currentStock || 0),
+      alertQuantity: Number(p.alertQuantity || 5),
+    })));
   } catch (error: any) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Failed to fetch products' });
@@ -260,7 +266,12 @@ app.delete('/api/sales', async (req, res) => {
 app.get('/api/contacts', async (req, res) => {
   try {
     const allContacts = await db.select().from(schema.contacts);
-    res.json(allContacts);
+    res.json(allContacts.map(c => ({
+      ...c,
+      creditLimit: c.creditLimit ? Number(c.creditLimit) : undefined,
+      balance: Number(c.balance || 0),
+      totalPurchases: Number(c.totalPurchases || 0),
+    })));
   } catch (error: any) {
     console.error('Error fetching contacts:', error);
     res.status(500).json({ error: 'Failed to fetch contacts' });
@@ -482,6 +493,36 @@ app.delete('/api/users/:uid', async (req, res) => {
   } catch (error: any) {
     console.error('Error deleting user:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Purchases API
+app.get('/api/purchases', async (req, res) => {
+  try {
+    const allPurchases = await db.select().from(schema.purchases);
+    res.json(allPurchases.map(p => ({
+      ...p,
+      grandTotal: Number(p.grandTotal || 0),
+      paymentDue: Number(p.paymentDue || 0),
+      itemsCount: Number(p.itemsCount || 1),
+    })));
+  } catch (error: any) {
+    console.error('Error fetching purchases:', error);
+    res.status(500).json({ error: 'Failed to fetch purchases' });
+  }
+});
+
+// Expenses API
+app.get('/api/expenses', async (req, res) => {
+  try {
+    const allExpenses = await db.select().from(schema.expenses);
+    res.json(allExpenses.map(e => ({
+      ...e,
+      amount: Number(e.amount || 0),
+    })));
+  } catch (error: any) {
+    console.error('Error fetching expenses:', error);
+    res.status(500).json({ error: 'Failed to fetch expenses' });
   }
 });
 

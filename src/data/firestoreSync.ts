@@ -214,7 +214,12 @@ export const FirestoreSync = {
     try {
       const snap = await getDocs(collection(db, 'users'));
       const list: AuthUser[] = [];
-      snap.forEach(d => list.push(d.data() as AuthUser));
+      snap.forEach(d => {
+        const u = d.data() as AuthUser;
+        if (u && u.username !== 'admin' && u.id !== 'usr-admin-default' && u.id !== 'usr-jubo-default' && u.id !== 'usr-sahidul-default') {
+          list.push(u);
+        }
+      });
       return list;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, 'users');
@@ -250,7 +255,12 @@ export const FirestoreSync = {
   subscribeUsers(callback: (users: AuthUser[]) => void) {
     return onSnapshot(collection(db, 'users'), (snap) => {
       const list: AuthUser[] = [];
-      snap.forEach(d => list.push(d.data() as AuthUser));
+      snap.forEach(d => {
+        const u = d.data() as AuthUser;
+        if (u && u.username !== 'admin' && u.id !== 'usr-admin-default' && u.id !== 'usr-jubo-default' && u.id !== 'usr-sahidul-default') {
+          list.push(u);
+        }
+      });
       callback(list);
     }, (e) => handleFirestoreError(e, OperationType.GET, 'users'));
   }

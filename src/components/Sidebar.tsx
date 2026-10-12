@@ -20,7 +20,20 @@ import {
   Sparkles,
   Layers,
   CircleDot,
-  CreditCard
+  CreditCard,
+  Tag,
+  ShieldCheck,
+  FileText,
+  SlidersHorizontal,
+  Printer,
+  Clock,
+  Truck,
+  Percent,
+  Store,
+  RotateCcw,
+  FileSpreadsheet,
+  Activity,
+  BadgePercent
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 import { BusinessSettings, UserRole, AuthUser } from '../types';
@@ -115,7 +128,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'user-management',
       labelKey: t.nav.userManagement,
       icon: <Users className="h-4 w-4 shrink-0" />,
-      category: 'core'
+      category: 'core',
+      children: [
+        { id: 'user-management', labelKey: lang === 'bn' ? 'ইউজার তালিকা' : 'Users' },
+        { id: 'roles-list', labelKey: lang === 'bn' ? 'ইউজার রোল ও পারমিশন' : 'Roles' },
+        { id: 'commission-agents', labelKey: lang === 'bn' ? 'সেলস কমিশন এজেন্ট' : 'Sales Commission Agents' }
+      ]
     },
     {
       id: 'synced-dues',
@@ -131,7 +149,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       children: [
         { id: 'contact-suppliers', labelKey: t.nav.suppliers },
         { id: 'contact-customers', labelKey: t.nav.customers },
-        { id: 'contact-customer-group', labelKey: t.nav.customerGroup }
+        { id: 'contact-customer-group', labelKey: t.nav.customerGroup },
+        { id: 'contact-import', labelKey: lang === 'bn' ? 'কন্টাক্ট ইমপোর্ট' : 'Import Contacts' }
       ]
     },
     {
@@ -142,7 +161,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       children: [
         { id: 'products-list', labelKey: t.nav.listOfProducts },
         { id: 'products-add', labelKey: t.nav.addProduct },
-        { id: 'products-update-price', labelKey: t.nav.updatePrice }
+        { id: 'products-update-price', labelKey: t.nav.updatePrice },
+        { id: 'products-print-labels', labelKey: lang === 'bn' ? 'বারকোড লেবেল প্রিন্ট' : 'Print Labels' },
+        { id: 'products-variations', labelKey: lang === 'bn' ? 'ভ্যারিয়েশন টেমপ্লেট' : 'Variations' },
+        { id: 'products-units', labelKey: lang === 'bn' ? 'পরিমাপ ইউনিট (Units)' : 'Units' },
+        { id: 'products-categories', labelKey: lang === 'bn' ? 'ক্যাটাগরি সমূহ' : 'Categories' },
+        { id: 'products-brands', labelKey: lang === 'bn' ? 'ব্র্যান্ড সমূহ (Brands)' : 'Brands' },
+        { id: 'products-warranties', labelKey: lang === 'bn' ? 'ওয়ারেন্টি পলিসি' : 'Warranties' }
       ]
     },
     {
@@ -163,12 +188,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       category: 'operations',
       children: [
         { id: 'sales-all', labelKey: t.nav.allSales },
-        { id: 'synced-dues', labelKey: lang === 'bn' ? 'বকেয়া খতিয়ান ও আদায়' : 'Synced Dues Hub' },
         { id: 'sales-add', labelKey: t.nav.addSale },
         { id: 'sales-pos-list', labelKey: t.nav.listOfPos },
+        { id: 'pos-terminal', labelKey: lang === 'bn' ? 'পিওএস টার্মিনাল' : 'POS Terminal' },
+        { id: 'synced-dues', labelKey: lang === 'bn' ? 'বকেয়া খতিয়ান ও আদায়' : 'Synced Dues Hub' },
         { id: 'sales-add-draft', labelKey: t.nav.addDraft },
         { id: 'sales-draft-list', labelKey: t.nav.listDraft },
-        { id: 'sales-return-list', labelKey: t.nav.listSalesReturn }
+        { id: 'sales-add-quotation', labelKey: lang === 'bn' ? 'কোটেশন তৈরি' : 'Add Quotation' },
+        { id: 'sales-quotation-list', labelKey: lang === 'bn' ? 'কোটেশন তালিকা' : 'List Quotations' },
+        { id: 'sales-return-list', labelKey: t.nav.listSalesReturn },
+        { id: 'sales-shipments', labelKey: lang === 'bn' ? 'ডেলিভারি ও শিপমেন্ট' : 'Shipments' },
+        { id: 'sales-discounts', labelKey: lang === 'bn' ? 'ডিসকাউন্ট স্কিম' : 'Discounts' }
       ]
     },
     {
@@ -182,13 +212,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ]
     },
     {
+      id: 'stock-adjustment',
+      labelKey: lang === 'bn' ? 'স্টক অ্যাডজাস্টমেন্ট' : 'Stock Adjustment',
+      icon: <SlidersHorizontal className="h-4 w-4 shrink-0" />,
+      category: 'operations',
+      children: [
+        { id: 'stock-adjustment-list', labelKey: lang === 'bn' ? 'অ্যাডজাস্টমেন্ট তালিকা' : 'List Stock Adjustments' },
+        { id: 'stock-adjustment-add', labelKey: lang === 'bn' ? 'নতুন স্টক সমন্বয়' : 'Add Stock Adjustment' }
+      ]
+    },
+    {
       id: 'expenses',
       labelKey: t.nav.expenses,
       icon: <Receipt className="h-4 w-4 shrink-0" />,
       category: 'operations',
       children: [
         { id: 'expenses-list', labelKey: t.nav.listExpenses },
-        { id: 'expenses-add', labelKey: t.nav.addExpense }
+        { id: 'expenses-add', labelKey: t.nav.addExpense },
+        { id: 'expense-categories', labelKey: lang === 'bn' ? 'খরচের ক্যাটাগরি' : 'Expense Categories' }
       ]
     },
     {
@@ -199,7 +240,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       children: [
         { id: 'reports-profit-loss', labelKey: t.nav.profitLoss },
         { id: 'reports-purchase-sales', labelKey: t.nav.purchaseSales },
-        { id: 'reports-stock', labelKey: t.nav.stockReport }
+        { id: 'reports-tax', labelKey: lang === 'bn' ? 'ট্যাক্স/ভ্যাট রিপোর্ট' : 'Tax Report' },
+        { id: 'reports-supplier-customer', labelKey: lang === 'bn' ? 'সাপ্লায়ার ও কাস্টমার রিপোর্ট' : 'Supplier & Customer Report' },
+        { id: 'reports-customer-group', labelKey: lang === 'bn' ? 'কাস্টমার গ্রুপ রিপোর্ট' : 'Customer Groups Report' },
+        { id: 'reports-stock', labelKey: t.nav.stockReport },
+        { id: 'reports-stock-adjustment', labelKey: lang === 'bn' ? 'স্টক অ্যাডজাস্টমেন্ট রিপোর্ট' : 'Stock Adjustment Report' },
+        { id: 'reports-trending', labelKey: lang === 'bn' ? 'জনপ্রিয় ও ট্রেন্ডিং পণ্য' : 'Trending Products' },
+        { id: 'reports-items', labelKey: lang === 'bn' ? 'আইটেম রিপোর্ট' : 'Items Report' },
+        { id: 'reports-product-purchase', labelKey: lang === 'bn' ? 'পণ্যভিত্তিক ক্রয় রিপোর্ট' : 'Product Purchase Report' },
+        { id: 'reports-product-sell', labelKey: lang === 'bn' ? 'পণ্যভিত্তিক বিক্রয় রিপোর্ট' : 'Product Sell Report' },
+        { id: 'reports-purchase-payment', labelKey: lang === 'bn' ? 'ক্রয় পেমেন্ট রিপোর্ট' : 'Purchase Payment Report' },
+        { id: 'reports-sell-payment', labelKey: lang === 'bn' ? 'বিক্রয় পেমেন্ট রিপোর্ট' : 'Sell Payment Report' },
+        { id: 'reports-expense', labelKey: lang === 'bn' ? 'খরচ ও ব্যয় রিপোর্ট' : 'Expense Report' },
+        { id: 'reports-register', labelKey: lang === 'bn' ? 'রেজিস্টার ও ক্যাশ কাউন্টার' : 'Register Report' },
+        { id: 'reports-sales-rep', labelKey: lang === 'bn' ? 'সেলস প্রতিনিধি রিপোর্ট' : 'Sales Representative Report' },
+        { id: 'reports-activity-log', labelKey: lang === 'bn' ? 'অ্যাক্টিভিটি লগ' : 'Activity Log' }
       ]
     },
     {
@@ -209,7 +264,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       category: 'admin',
       children: [
         { id: 'settings-business', labelKey: t.nav.businessSettings },
-        { id: 'settings-invoice', labelKey: t.nav.invoiceSettings }
+        { id: 'settings-locations', labelKey: lang === 'bn' ? 'ব্যবসায়িক শাখা (Locations)' : 'Business Locations' },
+        { id: 'settings-invoice', labelKey: t.nav.invoiceSettings },
+        { id: 'settings-barcodes', labelKey: lang === 'bn' ? 'বারকোড সেটিংস' : 'Barcode Settings' },
+        { id: 'settings-printers', labelKey: lang === 'bn' ? 'রসিদ ও থার্মাল প্রিন্টার' : 'Receipt Printers' },
+        { id: 'settings-tax-rates', labelKey: lang === 'bn' ? 'ট্যাক্স রেট (Tax Rates)' : 'Tax Rates' }
       ]
     }
   ];

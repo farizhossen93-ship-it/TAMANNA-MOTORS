@@ -1,11 +1,15 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-export const DEFAULT_SUPABASE_URL = 'https://iffbunouoeobkiotiwhn.supabase.co';
-export const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmZmJ1bm91b2VvYmtpb3Rpd2huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NTE3MDUsImV4cCI6MjEwNzEyNzcwNX0.dUtheGuX6FAVDvUy8VGAeRm8TrcJ4w2xK6BGau1DF7g';
+export const DEFAULT_SUPABASE_URL = 'https://ymvpphrryprluwjoivur.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltdnBwaHJyeXBybHV3am9pdnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMDEyNTcsImV4cCI6MjEwNjg3NzI1N30.6c8uKTyv5jiO_Ru_kpUpDUfcrlsKulHt3KEqYLib8bY';
 
 export const getSupabaseUrl = (): string => {
   try {
-    return localStorage.getItem('tamanna_custom_supabase_url') || DEFAULT_SUPABASE_URL;
+    const custom = localStorage.getItem('tamanna_custom_supabase_url');
+    if (custom) return custom;
+    const envUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || '').replace(/^[A-Z_]+(?:\s*[:=→\->]+\s*)/i, '').trim();
+    if (envUrl && envUrl.startsWith('http')) return envUrl;
+    return DEFAULT_SUPABASE_URL;
   } catch {
     return DEFAULT_SUPABASE_URL;
   }
@@ -13,7 +17,11 @@ export const getSupabaseUrl = (): string => {
 
 export const getSupabaseAnonKey = (): string => {
   try {
-    return localStorage.getItem('tamanna_custom_supabase_anon_key') || DEFAULT_SUPABASE_ANON_KEY;
+    const custom = localStorage.getItem('tamanna_custom_supabase_anon_key');
+    if (custom) return custom;
+    const envKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '').trim();
+    if (envKey) return envKey;
+    return DEFAULT_SUPABASE_ANON_KEY;
   } catch {
     return DEFAULT_SUPABASE_ANON_KEY;
   }

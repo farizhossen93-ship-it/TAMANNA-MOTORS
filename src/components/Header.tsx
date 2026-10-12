@@ -119,9 +119,9 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-3 border-b border-white/20 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl px-3 sm:px-4 lg:px-6 shadow-md select-none transition-colors">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-1 sm:gap-2 lg:gap-3 border-b border-white/20 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl px-2 sm:px-3 lg:px-5 shadow-md select-none transition-colors overflow-hidden whitespace-nowrap">
       {/* Left section: Toggle, Logo & Greeting */}
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all backdrop-blur-md cursor-pointer active:scale-95"
@@ -143,12 +143,13 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        <div className="hidden sm:flex items-center gap-2 min-w-0">
-          <span className="text-xs md:text-sm font-bold text-slate-900 dark:text-white truncate max-w-[130px] md:max-w-[180px]">
+        {/* Greeting - only on xl+ viewports so zoom-in never collides */}
+        <div className="hidden xl:flex items-center gap-1.5 min-w-0 shrink">
+          <span className="text-xs lg:text-sm font-bold text-slate-900 dark:text-white truncate max-w-[120px] 2xl:max-w-[200px]">
             {t.welcome}, {currentUser?.name || (lang === 'bn' ? 'অ্যাডমিন' : 'Admin')}
           </span>
 
-          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0">
+          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-wide border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0">
             <Shield className="h-2.5 w-2.5" />
             <span>
               {currentUser?.role === 'super_admin'
@@ -164,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Super Admin Quick 'Put New Entry' Button & Menu */}
         {userRole === 'super_admin' && onPutNewEntry && (
-          <div className="relative ml-1">
+          <div className="relative ml-0.5 shrink-0">
             <button
               onClick={() => {
                 setQuickEntryDropdownOpen(!quickEntryDropdownOpen);
@@ -172,11 +173,11 @@ export const Header: React.FC<HeaderProps> = ({
                 setBranchDropdownOpen(false);
                 setProfileDropdownOpen(false);
               }}
-              className="flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-2.5 py-1 text-xs font-bold shadow-xs transition-all active:scale-98 shrink-0 cursor-pointer"
+              className="flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-2 sm:px-2.5 py-1 text-xs font-bold shadow-xs transition-all active:scale-98 shrink-0 cursor-pointer"
               title="Super Admin: Put new entry into database with instant sync"
             >
               <Plus className="h-3 w-3 stroke-[3]" />
-              <span className="hidden xs:inline">{lang === 'bn' ? 'নতুন এন্ট্রি' : 'Put Entry'}</span>
+              <span className="hidden xl:inline">{lang === 'bn' ? 'নতুন এন্ট্রি' : 'Put Entry'}</span>
               <ChevronDown className="h-2.5 w-2.5 opacity-80" />
             </button>
 
@@ -330,9 +331,9 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right section: Theme, Language, Date/Time, POS shortcut, Calculator & Profile */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5">
-        {/* Live Date & Time */}
-        <div className="hidden xl:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800 pr-3">
+      <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2 shrink-0">
+        {/* Live Date & Time - shown only on extra wide screens / 100% zoom on 1440p+ */}
+        <div className="hidden 2xl:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800 pr-2.5">
           <Clock className="h-3.5 w-3.5 text-slate-400" />
           <span className="font-medium">{currentDate}</span>
           <span className="text-slate-300 dark:text-slate-700">·</span>
@@ -340,10 +341,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Language Switcher (EN / বাংলা) */}
-        <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs font-bold">
+        <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs font-bold shrink-0">
           <button
             onClick={() => onToggleLang('en')}
-            className={`px-2 py-1 rounded-md transition-colors ${
+            className={`px-1.5 sm:px-2 py-1 rounded-md transition-colors text-[11px] sm:text-xs ${
               lang === 'en'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -354,7 +355,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             onClick={() => onToggleLang('bn')}
-            className={`px-2 py-1 rounded-md transition-colors ${
+            className={`px-1.5 sm:px-2 py-1 rounded-md transition-colors text-[11px] sm:text-xs ${
               lang === 'bn'
                 ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -368,7 +369,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Theme Toggle (Dark / Light) */}
         <button
           onClick={onToggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
+          className="flex h-8.5 w-8.5 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
           title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
           aria-label="Toggle Theme"
         >
@@ -379,75 +380,62 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </button>
 
-        {/* Global Quick Search Button (Ctrl+S) - hidden on small mobile, visible on sm+ */}
+        {/* Global Quick Search Button (Ctrl+S) - responsive on wide viewports */}
         <button
           onClick={onOpenSearch}
-          className="hidden sm:flex items-center gap-2 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 px-2.5 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-emerald-500/50 transition-all backdrop-blur-md shadow-2xs cursor-pointer active:scale-95"
+          className="hidden lg:flex items-center gap-1.5 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 p-2 xl:px-2.5 xl:py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-emerald-500/50 transition-all backdrop-blur-md shadow-2xs cursor-pointer active:scale-95 shrink-0"
           title="Global Search & Commands (Ctrl+S)"
         >
-          <Search className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span className="hidden md:inline text-[11px] font-medium">{lang === 'bn' ? 'সার্চ...' : 'Search...'}</span>
-          <kbd className="hidden lg:inline-block px-1.5 py-0.2 text-[9px] font-mono font-bold rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600">
+          <Search className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="hidden 2xl:inline text-[11px] font-medium">{lang === 'bn' ? 'সার্চ...' : 'Search...'}</span>
+          <kbd className="hidden 2xl:inline-block px-1 py-0.2 text-[9px] font-mono font-bold rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600">
             Ctrl+S
           </kbd>
         </button>
 
-        {/* Keyboard Shortcuts Help Button - hidden on mobile/tablet to avoid overflow */}
-        <button
-          onClick={onOpenShortcutsHelp}
-          className="hidden lg:flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
-          title="Keyboard Shortcuts (Ctrl+/)"
-          aria-label="Keyboard Shortcuts"
-        >
-          <Keyboard className="h-4 w-4" />
-        </button>
-
-        {/* Calculator Button - hidden on mobile, visible on md+ */}
+        {/* Calculator Button - hidden when zooming in, accessible via shortcuts */}
         <button
           onClick={onOpenCalculator}
-          className="hidden md:flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
+          className="hidden 2xl:flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
           title="Calculator (Alt+C)"
           aria-label="Open Calculator"
         >
           <Calculator className="h-4 w-4" />
         </button>
 
-        {/* Invoice QR Scanner Button - hidden on small mobile, visible on md+ */}
+        {/* Invoice QR Scanner Button - hidden on tight viewports, accessible via Ctrl+I */}
         <button
           onClick={onOpenInvoiceScanner}
-          className="hidden md:flex items-center gap-1.5 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 px-2.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all backdrop-blur-md whitespace-nowrap cursor-pointer shadow-xs active:scale-95"
+          className="hidden 2xl:flex items-center gap-1.5 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 px-2.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all backdrop-blur-md whitespace-nowrap cursor-pointer shadow-xs active:scale-95 shrink-0"
           title={lang === 'bn' ? 'চালান কিউআর স্ক্যান ও যাচাই (Ctrl+I)' : 'Scan & Verify Invoice QR (Ctrl+I)'}
         >
           <QrCode className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          <span className="hidden lg:inline">{lang === 'bn' ? 'চালান স্ক্যান' : 'Scan Invoice'}</span>
-          <kbd className="hidden xl:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600">
-            Ctrl+I
-          </kbd>
+          <span>{lang === 'bn' ? 'চালান স্ক্যান' : 'Scan'}</span>
         </button>
 
-        {/* POS Shortcut Button - always accessible, responsive sizing */}
+        {/* POS Shortcut Button - always accessible, rock-solid responsive */}
         <button
           onClick={onOpenPos}
-          className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-2.5 sm:px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all whitespace-nowrap cursor-pointer ring-1 ring-white/20"
+          className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all whitespace-nowrap cursor-pointer ring-1 ring-white/20 shrink-0"
           title="Launch POS Terminal (Ctrl+P)"
         >
-          <ShoppingCart className="h-4 w-4 shrink-0" />
-          <span className="hidden xs:inline">{t.openPos}</span>
-          <span className="xs:hidden font-black">POS</span>
-          <kbd className="hidden sm:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-800/80 text-emerald-100">
+          <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+          <span className="hidden lg:inline">{t.openPos}</span>
+          <span className="lg:hidden font-black text-xs">POS</span>
+          <kbd className="hidden 2xl:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-800/80 text-emerald-100">
             Ctrl+P
           </kbd>
         </button>
 
         {/* User Profile Dropdown */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => {
               setProfileDropdownOpen(!profileDropdownOpen);
               setBranchDropdownOpen(false);
               setNotificationOpen(false);
             }}
-            className="flex items-center gap-1.5 sm:gap-2 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 p-1 pl-1.5 sm:pl-2 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl border border-white/20 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 p-1 pl-1 sm:pl-1.5 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-all backdrop-blur-md cursor-pointer active:scale-95 shrink-0"
             aria-label="User Menu"
           >
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-700 text-xs font-bold text-white overflow-hidden shadow-xs ring-1 ring-white/20 shrink-0">
@@ -457,11 +445,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>TM</span>
               ))}
             </div>
-            <div className="hidden text-left xl:block">
-              <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[130px]">
+            <div className="hidden text-left 2xl:block min-w-0">
+              <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[110px]">
                 {currentUser?.name || (lang === 'bn' ? 'অ্যাডমিন ইউজার' : 'Admin User')}
               </div>
-              <div className="text-[10px] text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium capitalize">
+              <div className="text-[10px] text-slate-600 dark:text-slate-300 flex items-center gap-1 font-medium capitalize truncate">
                 {(currentUser?.role || userRole) === 'super_admin' ? (
                   <span className="font-extrabold text-amber-600 dark:text-amber-400">👑 {t.superAdmin}</span>
                 ) : (
@@ -469,7 +457,7 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
             </div>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" />
           </button>
 
           {profileDropdownOpen && (

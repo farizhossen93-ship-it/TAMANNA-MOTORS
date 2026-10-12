@@ -258,7 +258,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       '--------------------------------',
       `Subtotal: ${currencySymbol}${subtotal.toFixed(0)}`,
       discountAmount > 0 ? `Discount: -${currencySymbol}${discountAmount.toFixed(0)}` : '',
-      `VAT (5%): ${currencySymbol}${taxAmount.toFixed(0)}`,
+      taxAmount > 0 ? `VAT: ${currencySymbol}${taxAmount.toFixed(0)}` : '',
       `GRAND TOTAL: ${currencySymbol}${grandTotal.toFixed(0)}`,
       `In Words: ${toEnglishWords(grandTotal)}`,
       `Paid (${paymentMethod}): ${currencySymbol}${amountTendered.toFixed(0)}`,
@@ -631,10 +631,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       <span className="tabular-nums">-{currencySymbol}{discountAmount.toLocaleString('en-US')}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-600">
-                    <span>ভ্যাট / মূসক (VAT 5%):</span>
-                    <span className="font-semibold tabular-nums text-slate-900">{currencySymbol}{taxAmount.toLocaleString('en-US')}</span>
-                  </div>
+                  {taxAmount > 0 && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>ভ্যাট / মূসক (VAT):</span>
+                      <span className="font-semibold tabular-nums text-slate-900">{currencySymbol}{taxAmount.toLocaleString('en-US')}</span>
+                    </div>
+                  )}
 
                   {/* Grand Total Highlight */}
                   <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-emerald-800 text-white font-black text-sm mt-2 shadow-xs">
@@ -832,10 +834,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <span className="tabular-nums">-{currencySymbol}{discountAmount.toFixed(0)}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span>ভ্যাট (VAT 5%):</span>
-                  <span className="tabular-nums">{currencySymbol}{taxAmount.toFixed(0)}</span>
-                </div>
+                {taxAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span>ভ্যাট (VAT):</span>
+                    <span className="tabular-nums">{currencySymbol}{taxAmount.toFixed(0)}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center text-sm font-black pt-1.5 border-t border-slate-300 dark:border-slate-700 text-slate-950 dark:text-white bg-slate-100 dark:bg-slate-800 p-2 rounded-lg mt-1">
                   <span>সর্বমোট টাকা:</span>

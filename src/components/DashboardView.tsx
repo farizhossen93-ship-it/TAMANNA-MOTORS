@@ -40,7 +40,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { MonthlySalesData } from '../data/mockData';
-import { Product, Sale, Purchase, Expense, UserRole } from '../types';
+import { Product, Sale, Purchase, Expense, UserRole, AuthUser } from '../types';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 
 interface DashboardViewProps {
@@ -52,6 +52,7 @@ interface DashboardViewProps {
   expenses?: Expense[];
   lang?: Language;
   userRole?: UserRole;
+  currentUser?: AuthUser | null;
   onQuickRestock?: (productId: string, amount: number) => void;
 }
 
@@ -64,6 +65,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   expenses = [],
   lang = 'en',
   userRole = 'super_admin',
+  currentUser,
   onQuickRestock
 }) => {
   const t = TRANSLATIONS[lang];
@@ -291,7 +293,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {t.dashboard.title}
+              {lang === 'bn' ? `স্বাগতম ${currentUser?.name || 'সুপার অ্যাডমিন'}, 👋` : `Welcome ${currentUser?.name || 'Super Admin'}, 👋`}
             </h1>
             <span className="text-xs text-emerald-800 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
               TAMANNA MOTORS
@@ -346,8 +348,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">
                 {lang === 'bn'
-                  ? `${lowStockItems.length} টি মোটর পার্টসের বর্তমান স্টক সতর্কবার্তা সীমার সমান বা নিচে রয়েছে। এক ক্লিকে ইনভেন্টরি তালিকা দেখুন।`
-                  : `${lowStockItems.length} products currently have stock less than or equal to their alert quantity.`}
+                  ? `${lowStockItems.length} টি এক্সকাভেটর ও মোটর পার্টসের বর্তমান স্টক সতর্কবার্তা সীমার সমান বা নিচে রয়েছে। এক ক্লিকে ইনভেন্টরি তালিকা দেখুন।`
+                  : `${lowStockItems.length} excavator & machinery parts currently have stock less than or equal to alert quantity.`}
               </p>
             </div>
           </div>

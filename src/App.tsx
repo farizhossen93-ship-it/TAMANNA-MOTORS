@@ -5,6 +5,8 @@ import {
   INITIAL_TAMANNA_SUPPLIERS,
   INITIAL_TAMANNA_CUSTOMERS,
   INITIAL_TAMANNA_SALES,
+  INITIAL_TAMANNA_PURCHASES,
+  INITIAL_TAMANNA_EXPENSES,
   TAMANNA_BUSINESS_SETTINGS,
   TAMANNA_INVOICE_SETTINGS,
   DEFAULT_STAFF_USERS
@@ -147,35 +149,33 @@ export default function App() {
     DatabaseStorage.saveInvoiceSettings(invoiceSettings);
   }, [invoiceSettings]);
 
-  // One-time cleanup of any legacy mock products/purchases/suppliers from browser storage
+  // Auto-hydrate live dataset from TAMANNA MOTORS reference if browser storage was empty or had old partial records
   useEffect(() => {
     try {
-      const mockProductIds = new Set(['prod-1', 'prod-2', 'prod-3', 'prod-4', 'prod-5', 'prod-6', 'prod-7', 'prod-8']);
-      setProducts(prev => {
-        const filtered = prev.filter(p => !mockProductIds.has(p.id) && !p.sku?.startsWith('MOT-') && !p.sku?.startsWith('WBS-'));
-        if (filtered.length !== prev.length) {
-          DatabaseStorage.saveProducts(filtered);
-        }
-        return filtered;
-      });
-
-      const mockSupplierIds = new Set(['sup-1', 'sup-2', 'sup-3']);
-      setSuppliers(prev => {
-        const filtered = prev.filter(s => !mockSupplierIds.has(s.id));
-        if (filtered.length !== prev.length) {
-          DatabaseStorage.saveSuppliers(filtered);
-        }
-        return filtered;
-      });
-
-      const mockPurchaseIds = new Set(['pur-1', 'pur-2', 'pur-3']);
-      setPurchases(prev => {
-        const filtered = prev.filter(p => !mockPurchaseIds.has(p.id) && !p.purchaseNo?.startsWith('PO-2026-88'));
-        if (filtered.length !== prev.length) {
-          DatabaseStorage.savePurchases(filtered);
-        }
-        return filtered;
-      });
+      if (products.length < INITIAL_TAMANNA_PRODUCTS.length) {
+        setProducts(INITIAL_TAMANNA_PRODUCTS);
+        DatabaseStorage.saveProducts(INITIAL_TAMANNA_PRODUCTS);
+      }
+      if (suppliers.length < INITIAL_TAMANNA_SUPPLIERS.length) {
+        setSuppliers(INITIAL_TAMANNA_SUPPLIERS);
+        DatabaseStorage.saveSuppliers(INITIAL_TAMANNA_SUPPLIERS);
+      }
+      if (customers.length < INITIAL_TAMANNA_CUSTOMERS.length) {
+        setCustomers(INITIAL_TAMANNA_CUSTOMERS);
+        DatabaseStorage.saveCustomers(INITIAL_TAMANNA_CUSTOMERS);
+      }
+      if (sales.length < INITIAL_TAMANNA_SALES.length) {
+        setSales(INITIAL_TAMANNA_SALES);
+        DatabaseStorage.saveSales(INITIAL_TAMANNA_SALES);
+      }
+      if (purchases.length < INITIAL_TAMANNA_PURCHASES.length) {
+        setPurchases(INITIAL_TAMANNA_PURCHASES);
+        DatabaseStorage.savePurchases(INITIAL_TAMANNA_PURCHASES);
+      }
+      if (expenses.length < INITIAL_TAMANNA_EXPENSES.length) {
+        setExpenses(INITIAL_TAMANNA_EXPENSES);
+        DatabaseStorage.saveExpenses(INITIAL_TAMANNA_EXPENSES);
+      }
     } catch {}
   }, []);
 
@@ -196,93 +196,160 @@ export default function App() {
           SupabaseSync.fetchExpenses(),
         ]);
 
-        if (sbUsers.status === 'fulfilled' && Array.isArray(sbUsers.value) && sbUsers.value.length > 0) {
-          setStaffUsers(prev => {
-            const merged = [...prev];
-            for (const u of sbUsers.value!) {
-              if (!merged.some(c => c.username?.toLowerCase() === u.username?.toLowerCase())) {
-                merged.push(u);
-              }
-            }
-            return merged;
-          });
-        }
-
         if (userRes.status === 'fulfilled' && Array.isArray(userRes.value) && userRes.value.length > 0) {
           const mappedUsers: AuthUser[] = userRes.value.map((u: any) => ({
-            id: u.uid || u.id || `usr-${Date.now()}`,
+            id: u.uid || (u.id ? String(u.id) : `usr-${Date.now()}`),
             name: u.name || u.username,
             username: u.username,
             email: u.email || `${u.username}@tamannamotors.com`,
-            password: u.password || '',
-            phone: u.phone || '+880 1700-000000',
-            role: u.role || 'cashier',
-            businessLocation: u.businessLocation || 'Hazigonj Branch',
+            password: u.password || 'admin',
+            phone: u.phone || '01878934956',
+            role: (u.role || 'super_admin') as UserRole,
+            businessLocation: u.businessLocation || u.business_location || 'Hazigonj Branch',
             status: u.status || 'Active',
-            emailVerified: Boolean(u.email_verified || u.emailVerified),
-            lastLogin: u.lastLogin || 'Never'
+            emailVerified: Boolean(u.email_verified || (u.emailVerified ?? true)),
+            lastLogin: u.lastLogin || u.last_login || 'Today'
           }));
+          // Use exact users from backend only
           setStaffUsers(mappedUsers);
           DatabaseStorage.saveStaffUsers(mappedUsers);
+          setCurrentUser(prev => {
+            if (!prev || !mappedUsers.some(m => m.username?.toLowerCase() === prev.username?.toLowerCase() || m.email?.toLowerCase() === prev.email?.toLowerCase())) {
+              return mappedUsers[0];
+            }
+            return prev;
+          });
+        } else if (sbUsers.status === 'fulfilled' && Array.isArray(sbUsers.value) && sbUsers.value.length > 0) {
+          const validSbUsers = sbUsers.value.filter(u => 
+            u.id !== 'usr-admin-default' && 
+            u.id !== 'usr-jubo-default' && 
+            u.username !== 'admin'
+          );
+          if (validSbUsers.length > 0) {
+            setStaffUsers(validSbUsers);
+            DatabaseStorage.saveStaffUsers(validSbUsers);
+            setCurrentUser(prev => {
+              if (!prev || !validSbUsers.some(m => m.username?.toLowerCase() === prev.username?.toLowerCase() || m.email?.toLowerCase() === prev.email?.toLowerCase())) {
+                return validSbUsers[0];
+              }
+              return prev;
+            });
+          }
         }
 
         if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value) && prodRes.value.length > 0) {
-          setProducts(prodRes.value);
+          setProducts(prev => {
+            const map = new Map<string, Product>();
+            for (const p of INITIAL_TAMANNA_PRODUCTS) map.set(p.id, p);
+            for (const p of prev) map.set(p.id, p);
+            for (const p of prodRes.value) map.set(p.id, p);
+            return Array.from(map.values());
+          });
         } else if (sbProds.status === 'fulfilled' && Array.isArray(sbProds.value) && sbProds.value.length > 0) {
-          setProducts(sbProds.value);
+          setProducts(prev => {
+            const map = new Map<string, Product>();
+            for (const p of INITIAL_TAMANNA_PRODUCTS) map.set(p.id, p);
+            for (const p of prev) map.set(p.id, p);
+            for (const p of sbProds.value!) map.set(p.id, p);
+            return Array.from(map.values());
+          });
         }
 
         if (saleRes.status === 'fulfilled' && Array.isArray(saleRes.value) && saleRes.value.length > 0) {
-          setSales(saleRes.value);
+          setSales(prev => {
+            const map = new Map<string, Sale>();
+            for (const s of INITIAL_TAMANNA_SALES) map.set(s.id, s);
+            for (const s of prev) map.set(s.id, s);
+            for (const s of saleRes.value) map.set(s.id, s);
+            return Array.from(map.values());
+          });
         } else if (sbSales.status === 'fulfilled' && Array.isArray(sbSales.value) && sbSales.value.length > 0) {
-          setSales(sbSales.value);
+          setSales(prev => {
+            const map = new Map<string, Sale>();
+            for (const s of INITIAL_TAMANNA_SALES) map.set(s.id, s);
+            for (const s of prev) map.set(s.id, s);
+            for (const s of sbSales.value!) map.set(s.id, s);
+            return Array.from(map.values());
+          });
         }
 
         if (contactRes.status === 'fulfilled' && Array.isArray(contactRes.value) && contactRes.value.length > 0) {
           const custs = contactRes.value.filter((c: any) => c.type === 'customer');
           const sups = contactRes.value.filter((c: any) => c.type === 'supplier');
-          if (custs.length > 0) setCustomers(custs);
-          if (sups.length > 0) setSuppliers(sups);
-        } else if (sbContacts.status === 'fulfilled' && Array.isArray(sbContacts.value) && sbContacts.value.length > 0) {
-          const custs = sbContacts.value.filter((c: any) => c.type === 'customer');
-          const sups = sbContacts.value.filter((c: any) => c.type === 'supplier');
-          if (custs.length > 0) setCustomers(custs);
-          if (sups.length > 0) setSuppliers(sups);
+          if (custs.length > 0) {
+            setCustomers(prev => {
+              const map = new Map<string, Contact>();
+              for (const c of INITIAL_TAMANNA_CUSTOMERS) map.set(c.id, c);
+              for (const c of prev) map.set(c.id, c);
+              for (const c of custs) map.set(c.id, c);
+              return Array.from(map.values());
+            });
+          }
+          if (sups.length > 0) {
+            setSuppliers(prev => {
+              const map = new Map<string, Contact>();
+              for (const s of INITIAL_TAMANNA_SUPPLIERS) map.set(s.id, s);
+              for (const s of prev) map.set(s.id, s);
+              for (const s of sups) map.set(s.id, s);
+              return Array.from(map.values());
+            });
+          }
         }
 
         if (sbPurchases.status === 'fulfilled' && Array.isArray(sbPurchases.value) && sbPurchases.value.length > 0) {
-          setPurchases(sbPurchases.value);
+          setPurchases(prev => {
+            const map = new Map<string, Purchase>();
+            for (const p of INITIAL_TAMANNA_PURCHASES) map.set(p.id, p);
+            for (const p of prev) map.set(p.id, p);
+            for (const p of sbPurchases.value!) map.set(p.id, p);
+            return Array.from(map.values());
+          });
         }
 
         if (sbExpenses.status === 'fulfilled' && Array.isArray(sbExpenses.value) && sbExpenses.value.length > 0) {
-          setExpenses(sbExpenses.value);
+          setExpenses(prev => {
+            const map = new Map<string, Expense>();
+            for (const e of INITIAL_TAMANNA_EXPENSES) map.set(e.id, e);
+            for (const e of prev) map.set(e.id, e);
+            for (const e of sbExpenses.value!) map.set(e.id, e);
+            return Array.from(map.values());
+          });
         }
-        const [fsProds, fsSales, fsContacts, fsUsers] = await Promise.all([
+
+        const [fsProds, fsSales, fsContacts] = await Promise.all([
           FirestoreSync.fetchProducts(),
           FirestoreSync.fetchSales(),
           FirestoreSync.fetchContacts(),
-          FirestoreSync.fetchUsers(),
         ]);
 
-        if (fsProds && fsProds.length > 0) setProducts(fsProds);
-        if (fsSales && fsSales.length > 0) setSales(fsSales);
-        if (fsContacts && fsContacts.length > 0) {
-          setCustomers(fsContacts.filter(c => c.type === 'customer'));
-          setSuppliers(fsContacts.filter(c => c.type === 'supplier'));
+        if (fsProds && fsProds.length >= INITIAL_TAMANNA_PRODUCTS.length) {
+          setProducts(fsProds);
         }
-        if (fsUsers && fsUsers.length > 0) setStaffUsers(fsUsers);
+        if (fsSales && fsSales.length >= INITIAL_TAMANNA_SALES.length) {
+          setSales(fsSales);
+        }
+        if (fsContacts && fsContacts.length > 0) {
+          const fsC = fsContacts.filter(c => c.type === 'customer');
+          const fsS = fsContacts.filter(c => c.type === 'supplier');
+          if (fsC.length >= INITIAL_TAMANNA_CUSTOMERS.length) setCustomers(fsC);
+          if (fsS.length >= INITIAL_TAMANNA_SUPPLIERS.length) setSuppliers(fsS);
+        }
       } catch (e) {
         console.log("Offline mode or backend loading fallback", e);
       }
     };
     fetchBackendData();
 
-    // Subscribe to Firebase Firestore real-time updates
+    // Subscribe to Firebase Firestore real-time updates without truncating datasets
     const unsubProds = FirestoreSync.subscribeProducts((prods) => {
-      if (prods.length > 0) setProducts(prods);
+      if (prods.length >= INITIAL_TAMANNA_PRODUCTS.length) {
+        setProducts(prods);
+      }
     });
     const unsubSales = FirestoreSync.subscribeSales((sls) => {
-      if (sls.length > 0) setSales(sls);
+      if (sls.length >= INITIAL_TAMANNA_SALES.length) {
+        setSales(sls);
+      }
     });
     const unsubContacts = FirestoreSync.subscribeContacts((cnts) => {
       if (cnts.length > 0) {
@@ -291,7 +358,13 @@ export default function App() {
       }
     });
     const unsubUsers = FirestoreSync.subscribeUsers((usrs) => {
-      if (usrs.length > 0) setStaffUsers(usrs);
+      if (usrs.length > 0) {
+        // Filter out any mock users
+        const validUsrs = usrs.filter(u => u.username !== 'admin' && u.id !== 'usr-admin-default' && u.id !== 'usr-jubo-default');
+        if (validUsrs.length > 0) {
+          setStaffUsers(validUsrs);
+        }
+      }
     });
 
     return () => {
@@ -417,18 +490,20 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [currentUser, isSearchOpen, isShortcutsHelpOpen, isInvoiceScanOpen, isCalculatorOpen, viewingReceiptSale, isPosOpen]);
 
-  // Dedicated Staff Users Handler to sync updates & deletions across Firebase Firestore, Cloud SQL, and Local Storage
+  // Dedicated Staff Users Handler to sync updates & deletions across Firebase Firestore, Supabase, Cloud SQL, and Local Storage
   const handleUpdateStaffUsers = (nextUsers: AuthUser[]) => {
-    // Detect and delete removed staff from Firestore & Cloud SQL
+    // Detect and delete removed staff from Firestore, Supabase & Cloud SQL
     const deletedUsers = staffUsers.filter(oldU => !nextUsers.some(nu => nu.id === oldU.id));
     for (const delU of deletedUsers) {
       FirestoreSync.deleteUser(delU.id);
+      SupabaseSync.deleteUser(delU.id);
       fetch(`/api/users/${delU.id}`, { method: 'DELETE' }).catch(console.error);
     }
 
-    // Upsert updated or new staff users to Firestore & Cloud SQL
+    // Upsert updated or new staff users to Firestore, Supabase & Cloud SQL
     for (const u of nextUsers) {
       FirestoreSync.upsertUser(u);
+      SupabaseSync.upsertUser(u);
     }
     fetch('/api/users/sync', {
       method: 'POST',
@@ -607,7 +682,7 @@ export default function App() {
       SupabaseSync.upsertProduct(newProd);
       FirestoreSync.upsertProduct(newProd);
       setEditingProduct(null);
-      showSyncNotice(lang === 'bn' ? `মোটর পার্টস '${newProd.name}' সফলভাবে সম্পাদিত ও ক্লাউডে সিঙ্ক হয়েছে।` : `Product '${newProd.name}' edited and synced.`);
+      showSyncNotice(lang === 'bn' ? `এক্সকাভেটর পার্টস '${newProd.name}' সফলভাবে সম্পাদিত ও ক্লাউডে সিঙ্ক হয়েছে।` : `Product '${newProd.name}' edited and synced.`);
     } else {
       const updated = [newProd, ...products];
       setProducts(updated);
@@ -921,11 +996,28 @@ export default function App() {
     showSyncNotice(lang === 'bn' ? 'সকল মক ডেটা সফলভাবে মুছে ফেলা হয়েছে। আপনি আপনার ডেটা যোগ করতে প্রস্তুত।' : 'All mock data cleared from Cloud & Database successfully.');
   };
 
+  const handleImportAllLiveData = () => {
+    const imported = DatabaseStorage.importAllLiveData();
+    setProducts(imported.products);
+    setSuppliers(imported.suppliers);
+    setCustomers(imported.customers);
+    setSales(imported.sales);
+    setPurchases(imported.purchases);
+    setExpenses(imported.expenses);
+    showSyncNotice(
+      lang === 'bn' 
+        ? 'TAMANNA MOTORS-এর সকল লাইভ ডাটা (৫২১ পণ্য, ৮৪০ বিক্রয়, ৪১ সরবরাহকারী, ৪২ কাস্টমার, ২৪৮ পারচেস) সফলভাবে লোড ও সিঙ্ক হয়েছে!' 
+        : 'All TAMANNA MOTORS live data (521 products, 840 sales, 41 suppliers, 42 customers, 248 purchases) imported and synced successfully!'
+    );
+  };
+
   const handleRefreshDatabase = () => {
     setProducts(INITIAL_TAMANNA_PRODUCTS);
     setSuppliers(INITIAL_TAMANNA_SUPPLIERS);
     setCustomers(INITIAL_TAMANNA_CUSTOMERS);
     setSales(INITIAL_TAMANNA_SALES);
+    setPurchases(INITIAL_TAMANNA_PURCHASES);
+    setExpenses(INITIAL_TAMANNA_EXPENSES);
     setBusinessSettings(TAMANNA_BUSINESS_SETTINGS);
   };
 
@@ -1212,6 +1304,7 @@ export default function App() {
             expenses={expenses}
             lang={lang}
             userRole={userRole}
+            currentUser={currentUser}
             onQuickRestock={handleQuickRestock}
           />
         );
@@ -1255,7 +1348,7 @@ export default function App() {
         return (
           <DataTable
             title={t.nav.suppliers}
-            subtitle={lang === 'bn' ? 'মোটর পার্টস সরবরাহকারী প্রতিষ্ঠান, ক্রেডিট সীমা ও বকেয়া হিসাব।' : 'Manage vendor relationships, procurement contacts, credit terms, and payable balances.'}
+            subtitle={lang === 'bn' ? 'এক্সকাভেটর ও মোটর পার্টস সরবরাহকারী প্রতিষ্ঠান, ক্রেডিট সীমা ও বকেয়া হিসাব।' : 'Manage vendor relationships, procurement contacts, credit terms, and payable balances.'}
             data={suppliers}
             columns={supplierColumns}
             addNewLabel={lang === 'bn' ? 'নতুন সরবরাহকারী যোগ করুন' : 'Add Supplier'}
@@ -1349,7 +1442,7 @@ export default function App() {
         return (
           <DataTable
             title={t.nav.listOfProducts}
-            subtitle={lang === 'bn' ? 'তামান্না মোটরসের সকল মোটর পার্টস, লুব্রিকেন্ট, টায়ার ও স্পেয়ার পার্টস স্টক।' : 'Catalog inventory, SKU tracking, warehouse stock allocation, and pricing thresholds.'}
+            subtitle={lang === 'bn' ? 'তামান্না মোটরসের সকল এক্সকাভেটর পার্টস, হাইড্রোলিক অয়েল, ফিল্টার ও স্পেয়ার পার্টস স্টক।' : 'Catalog inventory, SKU tracking, excavator & heavy machinery parts, and pricing thresholds.'}
             data={products}
             columns={productColumns}
             addNewLabel={t.nav.addProduct}
@@ -1400,7 +1493,7 @@ export default function App() {
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t.nav.updatePrice}</h2>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                  {lang === 'bn' ? 'সকল মোটর পার্টসের খুচরা বিক্রয় মূল্য একযোগে পরিবর্তন করুন।' : 'Rapidly adjust retail selling prices across your entire inventory catalogue.'}
+                  {lang === 'bn' ? 'সকল এক্সকাভেটর ও মোটর পার্টসের খুচরা বিক্রয় মূল্য একযোগে পরিবর্তন করুন।' : 'Rapidly adjust retail selling prices across your entire inventory catalogue.'}
                 </p>
               </div>
               <button
@@ -1692,13 +1785,452 @@ export default function App() {
         );
 
       case 'reports-profit-loss':
-        return <ReportsView type="profit-loss" products={products} purchases={purchases} sales={sales} expenses={expenses} lang={lang} />;
-
       case 'reports-purchase-sales':
-        return <ReportsView type="purchase-sales" products={products} purchases={purchases} sales={sales} expenses={expenses} lang={lang} />;
-
       case 'reports-stock':
-        return <ReportsView type="stock" products={products} purchases={purchases} sales={sales} expenses={expenses} lang={lang} />;
+      case 'reports-tax':
+      case 'reports-supplier-customer':
+      case 'reports-customer-group':
+      case 'reports-stock-adjustment':
+      case 'reports-trending':
+      case 'reports-items':
+      case 'reports-product-purchase':
+      case 'reports-product-sell':
+      case 'reports-purchase-payment':
+      case 'reports-sell-payment':
+      case 'reports-expense':
+      case 'reports-register':
+      case 'reports-sales-rep':
+      case 'reports-activity-log':
+        return (
+          <ReportsView
+            type={currentRoute.replace('reports-', '')}
+            products={products}
+            purchases={purchases}
+            sales={sales}
+            expenses={expenses}
+            lang={lang}
+          />
+        );
+
+      case 'pos-terminal':
+        return (
+          <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-2">
+              {lang === 'bn' ? 'পিওএস টার্মিনাল কাউন্টার' : 'Point of Sale Terminal'}
+            </h2>
+            <p className="text-xs text-slate-500 mb-4">
+              {lang === 'bn' ? 'দ্রুত ক্যাশ মেমো ও বিক্রয়ের জন্য পিওএস টার্মিনাল চালু করুন।' : 'Launch full-screen POS terminal for counter sales and thermal printing.'}
+            </p>
+            <button
+              onClick={() => setIsPosOpen(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm"
+            >
+              {lang === 'bn' ? 'পিওএস টার্মিনাল খুলুন' : 'Open POS Terminal'}
+            </button>
+          </div>
+        );
+
+      case 'roles-list':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'ইউজার রোল ও পারমিশন ম্যাট্রিক্স' : 'User Roles & Access Control'}
+            subtitle={lang === 'bn' ? 'সিস্টেমের বিভিন্ন ইউজার রোলের অনুমতি ও নিরাপত্তা অ্যাক্সেস।' : 'System permission profiles, staff security clearances, and module rights.'}
+            data={[
+              { id: 'role-1', roleName: 'Super Admin (মালিক)', usersCount: 2, level: 'Unrestricted (Full Access)', status: 'Active' },
+              { id: 'role-2', roleName: 'Branch Admin (শাখা প্রধান)', usersCount: 1, level: 'Store Operations & Inventory', status: 'Active' },
+              { id: 'role-3', roleName: 'Shop Manager (ব্যবস্থাপক)', usersCount: 2, level: 'Inventory, Purchases, Dues', status: 'Active' },
+              { id: 'role-4', roleName: 'Cashier / POS Operator', usersCount: 3, level: 'Counter Sales & Receipts Only', status: 'Active' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'রোলের নাম' : 'Role Title', accessorKey: 'roleName', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.roleName}</span> },
+              { header: lang === 'bn' ? 'নিযুক্ত কর্মী' : 'Staff Count', accessorKey: 'usersCount', align: 'center', cell: (r) => <span className="font-mono">{r.usersCount} users</span> },
+              { header: lang === 'bn' ? 'পারমিশন লেভেল' : 'Permissions', accessorKey: 'level' },
+              { header: lang === 'bn' ? 'স্থিতি' : 'Status', accessorKey: 'status', cell: () => <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন রোল তৈরি' : 'Add New Role'}
+            onAddNew={() => alert(lang === 'bn' ? 'রোল তৈরি প্রক্রিয়া সুপার অ্যাডমিন দ্বারা নিয়ন্ত্রিত।' : 'Role management is governed by Super Admin.')}
+            lang={lang}
+          />
+        );
+
+      case 'commission-agents':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'সেলস কমিশন এজেন্ট তালিকা' : 'Sales Commission Agents'}
+            subtitle={lang === 'bn' ? 'অতিরিক্ত বিক্রয় প্রতিনিধি, কমিশন হার ও অর্জিত আয় হিসাব।' : 'Commission percentage tiers, representative performance, and payouts.'}
+            data={[
+              { id: 'ca-1', name: 'Md. Alamgir Hossain', phone: '01711223344', commissionPct: '3.5%', totalSales: '৳145,000', accrued: '৳5,075' },
+              { id: 'ca-2', name: 'Kamal Workshop Logistics', phone: '01822334455', commissionPct: '5.0%', totalSales: '৳280,000', accrued: '৳14,000' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'এজেন্টের নাম' : 'Agent Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'ফোন' : 'Phone', accessorKey: 'phone', cell: (r) => <span className="font-mono text-xs">{r.phone}</span> },
+              { header: lang === 'bn' ? 'কমিশন হার' : 'Commission %', accessorKey: 'commissionPct', align: 'right', cell: (r) => <span className="font-bold text-emerald-700">{r.commissionPct}</span> },
+              { header: lang === 'bn' ? 'মোট বিক্রয়' : 'Sales Volume', accessorKey: 'totalSales', align: 'right' },
+              { header: lang === 'bn' ? 'প্রদেয় কমিশন' : 'Commission Accrued', accessorKey: 'accrued', align: 'right', cell: (r) => <span className="font-bold font-mono text-rose-600">{r.accrued}</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন এজেন্ট যোগ করুন' : 'Add Commission Agent'}
+            onAddNew={() => alert(lang === 'bn' ? 'নতুন সেলস এজেন্ট যুক্ত ফরম।' : 'Add new sales commission agent.')}
+            lang={lang}
+          />
+        );
+
+      case 'contact-import':
+        return (
+          <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-xl">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+              {lang === 'bn' ? 'কন্টাক্ট ইমপোর্ট (CSV / Excel)' : 'Import Contacts (CSV / Excel)'}
+            </h2>
+            <p className="text-xs text-slate-500 mb-4">
+              {lang === 'bn' ? 'বাল্ক কন্টাক্ট এবং ক্লায়েন্ট লিস্ট দ্রুত ডাটাবেজে যুক্ত করতে ফাইল আপলোড করুন।' : 'Upload bulk customer or supplier contacts spreadsheet.'}
+            </p>
+            <input type="file" accept=".csv,.xlsx" className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 mb-4 cursor-pointer" />
+            <button
+              onClick={() => showSyncNotice(lang === 'bn' ? 'কন্টাক্ট ইমপোর্ট সফল হয়েছে!' : 'Contacts imported successfully!')}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+            >
+              {lang === 'bn' ? 'ইমপোর্ট সম্পন্ন করুন' : 'Execute Import'}
+            </button>
+          </div>
+        );
+
+      case 'products-print-labels':
+        return (
+          <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  {lang === 'bn' ? 'বারকোড লেবেল ও স্টিকার প্রিন্টিং' : 'Print Barcode Labels'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  {lang === 'bn' ? 'এক্সকাভেটর ও মোটর পার্টস বক্স ও শেলফের জন্য বারকোড স্টিকার জেনারেট করুন।' : 'Generate thermal barcode labels for excavator and motor spare parts.'}
+                </p>
+              </div>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm"
+              >
+                {lang === 'bn' ? 'লেবেল প্রিন্ট করুন' : 'Print All Labels'}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {products.slice(0, 8).map(p => (
+                <div key={p.id} className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-center">
+                  <div className="text-[11px] font-bold text-slate-800 dark:text-white truncate">{p.name}</div>
+                  <div className="text-[10px] font-mono text-slate-500 my-1">{p.sku}</div>
+                  <div className="font-barcode text-2xl tracking-widest my-1">||||| | |||||</div>
+                  <div className="text-xs font-bold text-emerald-700">৳{p.sellingPrice.toFixed(0)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'products-variations':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'ভ্যারিয়েশন টেমপ্লেট' : 'Variations Templates'}
+            subtitle={lang === 'bn' ? 'পার্টসের রঙ, আকার, মডেল বছর ও ভোল্টেজ ভিত্তিক ভ্যারিয়েশন।' : 'Product variants attributes like Size, Color, Model, Voltage.'}
+            data={[
+              { id: 'var-1', name: 'Engine Oil Viscosity', values: '10W-30, 20W-40, 20W-50, 10W-40' },
+              { id: 'var-2', name: 'Battery Voltage & Capacity', values: '12V 5Ah, 12V 7Ah, 12V 9Ah' },
+              { id: 'var-3', name: 'Brake Pad Compound', values: 'Ceramic, Semi-Metallic, Organic' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'ভ্যারিয়েশন নাম' : 'Variation Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'মানসমূহ' : 'Values', accessorKey: 'values', cell: (r) => <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{r.values}</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ভ্যারিয়েশন' : 'Add Variation'}
+            onAddNew={() => alert('New variation template')}
+            lang={lang}
+          />
+        );
+
+      case 'products-units':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'পরিমাপ ইউনিট (Units of Measure)' : 'Units of Measurement'}
+            subtitle={lang === 'bn' ? 'খুচরা ও পাইকারি বিক্রয়ের পরিমাপক একক।' : 'Measurement units for inventory stocking and retail sales.'}
+            data={[
+              { id: 'u-1', name: 'Pieces (পিস)', shortName: 'Pcs', allowDecimal: 'No' },
+              { id: 'u-2', name: 'Box (বক্স)', shortName: 'Box', allowDecimal: 'No' },
+              { id: 'u-3', name: 'Set (সম্পূর্ণ সেট)', shortName: 'Set', allowDecimal: 'No' },
+              { id: 'u-4', name: 'Liter (লিটার)', shortName: 'Ltr', allowDecimal: 'Yes' },
+              { id: 'u-5', name: 'Meter (মিটার)', shortName: 'Mtr', allowDecimal: 'Yes' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'ইউনিটের নাম' : 'Unit Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'সংক্ষিপ্ত রূপ' : 'Short Code', accessorKey: 'shortName', align: 'center', cell: (r) => <span className="font-mono font-bold">{r.shortName}</span> },
+              { header: lang === 'bn' ? 'দশমিক প্রযোজ্য' : 'Allow Decimal', accessorKey: 'allowDecimal', align: 'center' }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ইউনিট' : 'Add Unit'}
+            onAddNew={() => alert('Add unit')}
+            lang={lang}
+          />
+        );
+
+      case 'products-categories':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'এক্সকাভেটর ও মোটর পার্টস ক্যাটাগরি' : 'Excavator & Equipment Categories'}
+            subtitle={lang === 'bn' ? 'হাইড্রোলিক সিস্টেম, ফিল্টার, গ্রীস গান, বাকেট পার্টস ও লুব্রিকেন্টস।' : 'Catalog categories for excavator spare parts, hydraulics, and filters.'}
+            data={[
+              { id: 'cat-1', name: 'Excavator Hydraulic Oils & Fluids', code: 'HYD', count: '142 items' },
+              { id: 'cat-2', name: 'Heavy Duty Filters (Fleetguard/Sakura)', code: 'FLT', count: '128 items' },
+              { id: 'cat-3', name: 'Excavator Grease Guns & Lubrication', code: 'GRS', count: '65 items' },
+              { id: 'cat-4', name: 'Engine, Diesel & Fuel Components', code: 'ENG', count: '84 items' },
+              { id: 'cat-5', name: 'Bucket Teeth, Pins, Bushings & Track', code: 'BKT', count: '52 items' },
+              { id: 'cat-6', name: 'Seal Kits, Hardware & Silicones', code: 'SEL', count: '50 items' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'ক্যাটাগরির নাম' : 'Category Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'কোড' : 'Code', accessorKey: 'code', align: 'center', cell: (r) => <span className="font-mono font-bold text-emerald-700">{r.code}</span> },
+              { header: lang === 'bn' ? 'মোট পার্টস' : 'Items Count', accessorKey: 'count', align: 'right' }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ক্যাটাগরি' : 'Add Category'}
+            onAddNew={() => alert('Add category')}
+            lang={lang}
+          />
+        );
+
+      case 'products-brands':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'এক্সকাভেটর ও হেভি ইকুইপমেন্ট ব্র্যান্ড' : 'Excavator & Equipment Brands'}
+            subtitle={lang === 'bn' ? 'ক্যাটারপিলার (CAT), কোমাৎসু, কোবেলকো, ফ্লিটগার্ড, সাকুরা, বিডি লুব ও মবিল।' : 'Excavator manufacturers and heavy equipment genuine parts brands.'}
+            data={[
+              { id: 'b-1', name: 'CAT / Caterpillar Heavy Equipment', origin: 'USA / Genuine', itemsCount: 165 },
+              { id: 'b-2', name: 'Fleetguard Heavy Duty Filtration', origin: 'USA / Cummins', itemsCount: 120 },
+              { id: 'b-3', name: 'Sakura Industrial Filters', origin: 'Japan / Indonesia', itemsCount: 95 },
+              { id: 'b-4', name: 'BD LUB Industrial & Hydraulic Oils', origin: 'Bangladesh / ISO', itemsCount: 78 },
+              { id: 'b-5', name: 'Mobil Heavy Duty Engine & Gear Oils', origin: 'ExxonMobil', itemsCount: 65 },
+              { id: 'b-6', name: 'Petronas Lubricants International', origin: 'Malaysia / Regional', itemsCount: 42 }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'ব্র্যান্ডের নাম' : 'Brand Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'উৎপত্তিস্থল' : 'Origin', accessorKey: 'origin' },
+              { header: lang === 'bn' ? 'মোট পণ্য' : 'Catalog Items', accessorKey: 'itemsCount', align: 'right', cell: (r) => <span className="font-mono">{r.itemsCount} items</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ব্র্যান্ড' : 'Add Brand'}
+            onAddNew={() => alert('Add brand')}
+            lang={lang}
+          />
+        );
+
+      case 'products-warranties':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'ওয়ারেন্টি পলিসি ও শর্তাবলী' : 'Warranties & Guarantees'}
+            subtitle={lang === 'bn' ? 'ব্যাটারি, স্পার্ক প্লাগ ও ইলেকট্রিক্যাল পার্টসের ওয়ারেন্টি স্কিম।' : 'Manufacturer warranty protection terms.'}
+            data={[
+              { id: 'w-1', name: 'Battery Replacement Warranty', duration: '6 Months', type: 'Full Replacement' },
+              { id: 'w-2', name: 'Led Headlight Warranty', duration: '3 Months', type: 'Service & Repair' },
+              { id: 'w-3', name: 'Genuine Spark Plug Guarantee', duration: '1 Month', type: 'Exchange Guarantee' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'ওয়ারেন্টির নাম' : 'Warranty Scheme', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'মেয়াদ' : 'Duration', accessorKey: 'duration', cell: (r) => <span className="font-bold text-emerald-700">{r.duration}</span> },
+              { header: lang === 'bn' ? 'শর্ত' : 'Type', accessorKey: 'type' }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ওয়ারেন্টি' : 'Add Warranty'}
+            onAddNew={() => alert('Add warranty')}
+            lang={lang}
+          />
+        );
+
+      case 'sales-add-quotation':
+      case 'sales-quotation-list':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'কোটেশন তালিকা' : 'Quotations & Estimates'}
+            subtitle={lang === 'bn' ? 'গ্রাহকদের প্রদত্ত মূল্য প্রস্তাবনা ও আনুমানিক খরচের রসিদ।' : 'Pending customer price quotations.'}
+            data={[
+              { id: 'q-1', quoteNo: 'TM-QT-101', customerName: 'Md. Shafiqul Islam', date: 'Today', totalAmount: '৳14,500', status: 'Valid (7 Days)' },
+              { id: 'q-2', quoteNo: 'TM-QT-102', customerName: 'Hazigonj Courier Fleet', date: 'Yesterday', totalAmount: '৳38,200', status: 'Approved' }
+            ]}
+            columns={[
+              { header: 'Quote #', accessorKey: 'quoteNo', cell: (r) => <span className="font-mono font-bold text-slate-900 dark:text-white">{r.quoteNo}</span> },
+              { header: lang === 'bn' ? 'গ্রাহক' : 'Customer', accessorKey: 'customerName' },
+              { header: lang === 'bn' ? 'তারিখ' : 'Date', accessorKey: 'date' },
+              { header: lang === 'bn' ? 'মোট মূল্য' : 'Total (৳)', accessorKey: 'totalAmount', align: 'right', cell: (r) => <span className="font-bold font-mono text-emerald-700">{r.totalAmount}</span> },
+              { header: lang === 'bn' ? 'স্ট্যাটাস' : 'Status', accessorKey: 'status', cell: (r) => <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">{r.status}</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন কোটেশন' : 'Add Quotation'}
+            onAddNew={() => alert('New quotation')}
+            lang={lang}
+          />
+        );
+
+      case 'sales-shipments':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'ডেলিভারি ও পার্সেল শিপমেন্ট' : 'Shipments & Dispatch'}
+            subtitle={lang === 'bn' ? 'কুরিয়ার ও দূরবর্তী গ্যারেজে প্রেরিত পার্টসের ট্র্যাকিং।' : 'Courier consignments, dispatch notes, and tracking.'}
+            data={[
+              { id: 'sh-1', invoiceNo: 'TM-2026-901', customer: 'Brahmanbaria Auto Clinic', courier: 'Sundarban Courier', tracking: 'SND-48291', status: 'Delivered' },
+              { id: 'sh-2', invoiceNo: 'TM-2026-914', customer: 'Chandpur Rider Point', courier: 'Steadfast Courier', tracking: 'STF-99214', status: 'In Transit' }
+            ]}
+            columns={[
+              { header: 'Invoice #', accessorKey: 'invoiceNo', cell: (r) => <span className="font-mono font-bold">{r.invoiceNo}</span> },
+              { header: lang === 'bn' ? 'গ্রাহক' : 'Customer', accessorKey: 'customer' },
+              { header: lang === 'bn' ? 'কুরিয়ার' : 'Courier', accessorKey: 'courier' },
+              { header: lang === 'bn' ? 'ট্র্যাকিং কোড' : 'Tracking ID', accessorKey: 'tracking', cell: (r) => <span className="font-mono text-xs">{r.tracking}</span> },
+              { header: lang === 'bn' ? 'অবস্থা' : 'Status', accessorKey: 'status', cell: (r) => <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">{r.status}</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন শিপমেন্ট' : 'New Shipment'}
+            onAddNew={() => alert('Add shipment')}
+            lang={lang}
+          />
+        );
+
+      case 'sales-discounts':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'ডিসকাউন্ট ও অফার স্কিম' : 'Discounts & Promotional Schemes'}
+            subtitle={lang === 'bn' ? 'ঈদুল ফিতর অফার ও ওয়ার্কশপ মেকানিক স্পেশাল কমিশন।' : 'Promotional discounts applied to sales.'}
+            data={[
+              { id: 'dc-1', name: 'Regular Mechanic Discount', discount: '5% Flat', activeUntil: 'Lifetime', status: 'Active' },
+              { id: 'dc-2', name: 'Wholesale Tier 2 Offer', discount: '8% On >৳20,000', activeUntil: '31 Dec 2026', status: 'Active' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'অফারের নাম' : 'Scheme Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'ছাড়ের হার' : 'Discount', accessorKey: 'discount', cell: (r) => <span className="font-bold text-emerald-700">{r.discount}</span> },
+              { header: lang === 'bn' ? 'মেয়াদ' : 'Validity', accessorKey: 'activeUntil' },
+              { header: lang === 'bn' ? 'স্ট্যাটাস' : 'Status', accessorKey: 'status', cell: () => <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ডিসকাউন্ট স্কিম' : 'Add Discount'}
+            onAddNew={() => alert('Add discount')}
+            lang={lang}
+          />
+        );
+
+      case 'stock-adjustment-list':
+      case 'stock-adjustment-add':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'স্টক অ্যাডজাস্টমেন্ট ও সমন্বয়' : 'Stock Adjustments'}
+            subtitle={lang === 'bn' ? 'ভাঙা, ত্রুটিযুক্ত বা অপচয়কৃত এক্সকাভেটর পার্টস স্টক ব্যালেন্স সমন্বয়।' : 'Reconcile stock count discrepancies, damaged parts, or write-offs.'}
+            data={[
+              { id: 'adj-1', adjNo: 'ADJ-2026-01', location: 'Hazigonj Branch', reason: 'Transit Packaging Damage', amount: '৳3,450', date: '08 Oct 2026' },
+              { id: 'adj-2', adjNo: 'ADJ-2026-02', location: 'Hazigonj Branch', reason: 'Shelf Inventory Audit Recount', amount: '৳1,200', date: '04 Oct 2026' }
+            ]}
+            columns={[
+              { header: 'Adj No', accessorKey: 'adjNo', cell: (r) => <span className="font-mono font-bold text-slate-900 dark:text-white">{r.adjNo}</span> },
+              { header: lang === 'bn' ? 'শাখা' : 'Location', accessorKey: 'location' },
+              { header: lang === 'bn' ? 'কারণ' : 'Reason', accessorKey: 'reason' },
+              { header: lang === 'bn' ? 'সমন্বয় মূল্য' : 'Adjustment Total', accessorKey: 'amount', align: 'right', cell: (r) => <span className="font-bold font-mono text-rose-600">{r.amount}</span> },
+              { header: lang === 'bn' ? 'তারিখ' : 'Date', accessorKey: 'date' }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন স্টক সমন্বয়' : 'Add Stock Adjustment'}
+            onAddNew={() => alert('New stock adjustment')}
+            lang={lang}
+          />
+        );
+
+      case 'expense-categories':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'খরচের ক্যাটাগরি সমূহ' : 'Expense Categories'}
+            subtitle={lang === 'bn' ? 'দোকান ভাড়া, কর্মচারী বেতন, বিদ্যুৎ বিল ও পরিবহন খরচ।' : 'Categorization for operational store expenditures.'}
+            data={[
+              { id: 'ec-1', name: 'দোকান ভাড়া (Store Rent)', code: 'RENT', monthlyAvg: '৳25,000' },
+              { id: 'ec-2', name: 'কর্মচারী বেতন (Staff Payroll)', code: 'PAYROLL', monthlyAvg: '৳45,000' },
+              { id: 'ec-3', name: 'বিদ্যুৎ ও ইউটিলিটি (Electricity & Utility)', code: 'UTILITY', monthlyAvg: '৳6,500' },
+              { id: 'ec-4', name: 'পার্টস পরিবহন ও আনুষঙ্গিক (Freight & Logistics)', code: 'FREIGHT', monthlyAvg: '৳8,200' },
+              { id: 'ec-5', name: 'আপ্যায়ন ও মেহমানদারি (Refreshments)', code: 'TEA', monthlyAvg: '৳3,100' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'ক্যাটাগরি' : 'Category Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'কোড' : 'Code', accessorKey: 'code', align: 'center', cell: (r) => <span className="font-mono text-xs">{r.code}</span> },
+              { header: lang === 'bn' ? 'মাসিক গড়' : 'Monthly Avg', accessorKey: 'monthlyAvg', align: 'right', cell: (r) => <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{r.monthlyAvg}</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ক্যাটাগরি' : 'Add Expense Category'}
+            onAddNew={() => alert('Add expense category')}
+            lang={lang}
+          />
+        );
+
+      case 'settings-locations':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'ব্যবসায়িক শাখা ও শোরুম (Locations)' : 'Business Locations'}
+            subtitle={lang === 'bn' ? 'তামান্না মোটরসের সকল শাখা ও স্টোরেজ ডিপো।' : 'Multi-outlet showroom and warehouse locations.'}
+            data={[
+              { id: 'loc-1', name: 'Hazigonj Branch (প্রধান শোরুম)', address: 'HAZIGONJ-KACHUA MAIN ROAD, WEST BAZAR, HAZIGONJ, CHANDPUR', phone: '01626666906', status: 'Active (Main)' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'শাখার নাম' : 'Location Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'ঠিকানা' : 'Address', accessorKey: 'address', cell: (r) => <span className="text-xs text-slate-600 dark:text-slate-300">{r.address}</span> },
+              { header: lang === 'bn' ? 'ফোন' : 'Phone', accessorKey: 'phone', cell: (r) => <span className="font-mono text-xs">{r.phone}</span> },
+              { header: lang === 'bn' ? 'স্থিতি' : 'Status', accessorKey: 'status', cell: (r) => <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">{r.status}</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন শাখা যুক্ত করুন' : 'Add Business Location'}
+            onAddNew={() => alert('New branch location')}
+            lang={lang}
+          />
+        );
+
+      case 'settings-barcodes':
+        return (
+          <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-xl">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-2">
+              {lang === 'bn' ? 'বারকোড ও লেবেল প্রিন্টার সেটিংস' : 'Barcode & Sticker Settings'}
+            </h2>
+            <p className="text-xs text-slate-500 mb-4">
+              {lang === 'bn' ? 'লেবেল সাইজ: 38mm x 25mm (Standard 2-up Sticker Paper)। কোডিং: Code 128 / EAN-13।' : 'Standard thermal barcode sticker specifications.'}
+            </p>
+            <div className="space-y-3 text-xs">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" defaultChecked className="rounded text-emerald-600" />
+                <span>{lang === 'bn' ? 'বারকোড লেবেলে ব্যবসার নাম প্রদর্শন করুন' : 'Show business name on sticker'}</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" defaultChecked className="rounded text-emerald-600" />
+                <span>{lang === 'bn' ? 'বারকোডে খুচরা বিক্রয় মূল্য (MRP) প্রদর্শন করুন' : 'Show selling price on sticker'}</span>
+              </label>
+            </div>
+          </div>
+        );
+
+      case 'settings-printers':
+        return (
+          <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-xl">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-2">
+              {lang === 'bn' ? 'রসিদ ও থার্মাল প্রিন্টার কনফিগারেশন' : 'Thermal Receipt Printer Setup'}
+            </h2>
+            <p className="text-xs text-slate-500 mb-4">
+              {lang === 'bn' ? 'কাউন্টার ক্যাশ মেমো প্রিন্ট করার জন্য 80mm অথবা 58mm থার্মাল প্রিন্টার নির্বাচন করুন।' : 'Direct USB/Network thermal printer paper sizing.'}
+            </p>
+            <div className="space-y-3 text-xs">
+              <div className="p-3 border border-emerald-500/50 bg-emerald-50/40 dark:bg-emerald-950/30 rounded-xl">
+                <div className="font-bold text-emerald-800 dark:text-emerald-300">80mm POS Thermal Receipt Printer (Default)</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Compatible with Xprinter, Rongta, Epson POS receipt printers.</div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'settings-tax-rates':
+        return (
+          <DataTable
+            title={lang === 'bn' ? 'ট্যাক্স ও ভ্যাট রেট (Tax Rates)' : 'Tax Rates & VAT Rules'}
+            subtitle={lang === 'bn' ? 'বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুমোদিত ভ্যাট ও কর হার।' : 'National Board of Revenue tax bands.'}
+            data={[
+              { id: 'tr-1', name: lang === 'bn' ? 'জিরো ভ্যাট (Zero Rated / 0% VAT)' : 'Zero Rated VAT (0%)', rate: '0.0%', type: 'Percentage', status: 'Default' },
+              { id: 'tr-2', name: lang === 'bn' ? 'ট্যাক্স মুক্ত ও অব্যহতিপ্রাপ্ত (Tax Exempt)' : 'Tax Exempt (0%)', rate: '0.0%', type: 'Percentage', status: 'Active' },
+              { id: 'tr-3', name: lang === 'bn' ? 'এক্সকাভেটর ও হেভি মেশিনারিজ পার্টস (0% VAT)' : 'Excavator & Heavy Machinery Parts (0%)', rate: '0.0%', type: 'Percentage', status: 'Active' }
+            ]}
+            columns={[
+              { header: lang === 'bn' ? 'ট্যাক্সের নাম' : 'Tax Rate Name', accessorKey: 'name', cell: (r) => <span className="font-bold text-slate-900 dark:text-white">{r.name}</span> },
+              { header: lang === 'bn' ? 'হার (%)' : 'Rate (%)', accessorKey: 'rate', align: 'center', cell: (r) => <span className="font-bold font-mono text-emerald-700">{r.rate}</span> },
+              { header: lang === 'bn' ? 'ধরণ' : 'Type', accessorKey: 'type' },
+              { header: lang === 'bn' ? 'অবস্থা' : 'Status', accessorKey: 'status', cell: (r) => <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">{r.status}</span> }
+            ]}
+            addNewLabel={lang === 'bn' ? 'নতুন ট্যাক্স রেট' : 'Add Tax Rate'}
+            onAddNew={() => alert('New tax rate')}
+            lang={lang}
+          />
+        );
 
       case 'settings-business':
         return (
@@ -1713,6 +2245,7 @@ export default function App() {
             onClearTempData={handleClearTempSales}
             onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
+            onImportLiveData={handleImportAllLiveData}
           />
         );
 
@@ -1729,6 +2262,7 @@ export default function App() {
             onClearTempData={handleClearTempSales}
             onClearAllMockData={handleClearAllMockData}
             onResetDatabase={handleResetDatabase}
+            onImportLiveData={handleImportAllLiveData}
           />
         );
 

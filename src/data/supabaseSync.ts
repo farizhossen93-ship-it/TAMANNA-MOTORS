@@ -296,19 +296,18 @@ export const SupabaseSync = {
   async upsertUser(user: AuthUser): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     try {
-      const { error } = await supabase.from('users').upsert({
-        uid: user.id,
+      const payload: any = {
+        uid: user.id || user.uid,
         email: user.email,
-        password: user.password || 'admin123',
         name: user.name,
         username: user.username,
         role: user.role,
         phone: user.phone || null,
         business_location: user.businessLocation || 'Hazigonj Branch',
         status: user.status || 'Active',
-        email_verified: user.emailVerified ?? false,
         last_login: user.lastLogin || new Date().toISOString()
-      }, { onConflict: 'uid' });
+      };
+      const { error } = await supabase.from('users').upsert(payload, { onConflict: 'uid' });
       return !error;
     } catch (e) {
       return false;

@@ -14,6 +14,7 @@ interface SettingsViewProps {
   onClearTempData?: () => void;
   onClearAllMockData?: () => void;
   onResetDatabase?: () => void;
+  onImportLiveData?: () => void;
   isSuperAdmin?: boolean;
 }
 
@@ -27,6 +28,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onClearTempData,
   onClearAllMockData,
   onResetDatabase,
+  onImportLiveData,
   isSuperAdmin = false
 }) => {
   const t = TRANSLATIONS[lang];
@@ -273,6 +275,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 font-mono text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden"
               />
             </div>
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                {lang === 'bn' ? 'ডিফল্ট ট্যাক্স ও ভ্যাট হার (%)' : 'Default Tax & VAT Rate (%)'}
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={bSettings.defaultTaxRate ?? 0}
+                onChange={(e) => setBSettings({ ...bSettings, defaultTaxRate: parseFloat(e.target.value) || 0 })}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 font-mono text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden"
+              />
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 block font-bold">
+                {lang === 'bn' ? '✓ বর্তমান ভ্যাট হার: 0% (জিরো ট্যাক্স রেট)' : '✓ Current VAT Rate: 0% (Zero Tax Rate)'}
+              </span>
+            </div>
           </div>
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -366,44 +384,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Database Maintenance & Data Cleanup (Super Admin Only) */}
-      {isSuperAdmin && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <Trash2 className="h-4 w-4 text-rose-500" />
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              {lang === 'bn' ? 'ডেটাবেজ ও ডেটা ক্লিয়ার ব্যবস্থাপনা (Super Admin)' : 'Database & Data Cleanup Management (Super Admin)'}
-            </h4>
+      {/* Live Data Import & Cloud Sync Quick Trigger */}
+      {onImportLiveData && (
+        <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/30 dark:bg-emerald-950/20 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-xl bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <RefreshCw className="h-4 w-4" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                {lang === 'bn' ? 'TAMANNA MOTORS রিয়েল ডেটাবেজ সিঙ্ক' : 'TAMANNA MOTORS Live Database Sync'}
+              </h5>
+              <p className="text-[11px] text-slate-500">
+                {lang === 'bn' ? '৫২১টি পণ্য, ৮৪০টি বিক্রয় চালান এবং ৪১টি সরবরাহকারী হিসাব।' : '521 catalog items, 840 sales tickets & 41 supplier ledgers.'}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-500">
-            {lang === 'bn' 
-              ? 'সকল মক/ডেমো ডেটা বা পরীক্ষামূলক তথ্য এক ক্লিকে সম্পূর্ণভাবে মুছে ফেলতে নিচের বাটনটি ব্যবহার করুন।' 
-              : 'Wipe all mock/demo records and start fresh with your own live store data.'}
-          </p>
-
-          <div className="flex flex-wrap gap-3 pt-1">
-            {onClearAllMockData && (
-              <button
-                type="button"
-                onClick={onClearAllMockData}
-                className="flex items-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-950/40 px-4 py-2 text-xs font-bold text-rose-800 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors cursor-pointer"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span>{lang === 'bn' ? 'সব ডেমো ডাটা সম্পূর্ণ মুছুন' : 'Wipe All Mock/Demo Data'}</span>
-              </button>
-            )}
-
-            {onResetDatabase && (
-              <button
-                type="button"
-                onClick={onResetDatabase}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>{lang === 'bn' ? 'ফ্যাক্টরি রিসেট' : 'Factory Reset Database'}</span>
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={onImportLiveData}
+            className="flex items-center gap-1.5 rounded-xl border border-emerald-500 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>{lang === 'bn' ? 'রিয়েল ডাটা সিঙ্ক করুন' : 'Sync Live Data'}</span>
+          </button>
         </div>
       )}
 

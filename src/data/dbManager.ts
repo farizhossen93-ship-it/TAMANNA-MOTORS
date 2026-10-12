@@ -3,30 +3,18 @@ import { idbSet, idbGet, idbClearStore, STORES } from './indexedDB';
 
 export const DEFAULT_STAFF_USERS: AuthUser[] = [
   {
-    id: 'usr-admin-default',
-    name: 'Super Admin (Owner)',
-    username: 'admin',
-    email: 'admin@tamannamotors.com',
-    password: 'admin123',
-    phone: '01804626477',
+    id: 'usr-sahidul-owner',
+    uid: 'usr-sahidul-owner',
+    name: 'MR MD SAHIDUL ISLAM',
+    username: 'sahidul',
+    email: 'tamannamotors.bd@gmail.com',
+    password: 'admin',
+    phone: '01878934956',
     role: 'super_admin',
     businessLocation: 'Hazigonj Branch',
     status: 'Active',
     emailVerified: true,
     lastLogin: 'Today'
-  },
-  {
-    id: 'usr-jubo-default',
-    name: 'Jubo',
-    username: 'jubo',
-    email: 'jubo.48a@gmail.com',
-    password: 'password123',
-    phone: '01800000000',
-    role: 'super_admin',
-    businessLocation: 'Hazigonj Branch',
-    status: 'Active',
-    emailVerified: true,
-    lastLogin: 'Never'
   }
 ];
 
@@ -36,7 +24,7 @@ export const TAMANNA_BUSINESS_SETTINGS: BusinessSettings = {
   defaultCurrency: "BDT (৳)",
   currencySymbol: "৳",
   financialYearStart: "July",
-  defaultTaxRate: 5.0,
+  defaultTaxRate: 0.0,
   primaryLocation: "Hazigonj Branch",
   contactEmail: "tamannamotors.bd@gmail.com",
   contactPhone: "01626666906, 01878934956",
@@ -53,11 +41,11 @@ export const TAMANNA_INVOICE_SETTINGS: InvoiceSettings = {
   logoUrl: ""
 };
 
-export const INITIAL_TAMANNA_PRODUCTS: Product[] = [];
+import importedTamannaData from './importedTamannaData.json';
 
-export const INITIAL_TAMANNA_SUPPLIERS: Contact[] = [];
-
-export const INITIAL_TAMANNA_CUSTOMERS: Contact[] = [
+export const INITIAL_TAMANNA_PRODUCTS: Product[] = (importedTamannaData.products || []) as Product[];
+export const INITIAL_TAMANNA_SUPPLIERS: Contact[] = (importedTamannaData.suppliers || []) as Contact[];
+export const INITIAL_TAMANNA_CUSTOMERS: Contact[] = (importedTamannaData.customers && importedTamannaData.customers.length > 0 ? importedTamannaData.customers : [
   {
     id: "cust-walkin",
     type: "customer",
@@ -69,11 +57,11 @@ export const INITIAL_TAMANNA_CUSTOMERS: Contact[] = [
     balance: 0.00,
     totalPurchases: 0.00
   }
-];
+]) as Contact[];
 
-export const INITIAL_TAMANNA_SALES: Sale[] = [];
-export const INITIAL_TAMANNA_PURCHASES: Purchase[] = [];
-export const INITIAL_TAMANNA_EXPENSES: Expense[] = [];
+export const INITIAL_TAMANNA_SALES: Sale[] = (importedTamannaData.sales || []) as Sale[];
+export const INITIAL_TAMANNA_PURCHASES: Purchase[] = (importedTamannaData.purchases || []) as Purchase[];
+export const INITIAL_TAMANNA_EXPENSES: Expense[] = (importedTamannaData.expenses || []) as Expense[];
 
 const STORAGE_KEYS = {
   PRODUCTS: 'tamanna_db_products',
@@ -121,12 +109,21 @@ export const DatabaseStorage = {
   loadProducts(): Product[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      if (!data) return [];
+      if (!data) return INITIAL_TAMANNA_PRODUCTS;
       const parsed: Product[] = JSON.parse(data);
-      if (!Array.isArray(parsed)) return [];
+      if (!Array.isArray(parsed) || parsed.length < INITIAL_TAMANNA_PRODUCTS.length) {
+        const map = new Map<string, Product>();
+        for (const p of INITIAL_TAMANNA_PRODUCTS) map.set(p.id, p);
+        if (Array.isArray(parsed)) {
+          for (const p of parsed) if (p && p.id) map.set(p.id, p);
+        }
+        const full = Array.from(map.values());
+        this.saveProducts(full);
+        return full;
+      }
       return parsed;
     } catch {
-      return [];
+      return INITIAL_TAMANNA_PRODUCTS;
     }
   },
 
@@ -145,17 +142,27 @@ export const DatabaseStorage = {
   loadSuppliers(): Contact[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SUPPLIERS);
-      if (!data) return [];
+      if (!data) return INITIAL_TAMANNA_SUPPLIERS;
       const parsed: Contact[] = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed.filter(c => c && c.id) : [];
+      if (!Array.isArray(parsed) || parsed.length < INITIAL_TAMANNA_SUPPLIERS.length) {
+        const map = new Map<string, Contact>();
+        for (const s of INITIAL_TAMANNA_SUPPLIERS) map.set(s.id, s);
+        if (Array.isArray(parsed)) {
+          for (const s of parsed) if (s && s.id) map.set(s.id, s);
+        }
+        const full = Array.from(map.values());
+        this.saveSuppliers(full);
+        return full;
+      }
+      return parsed.filter(c => c && c.id);
     } catch {
-      return [];
+      return INITIAL_TAMANNA_SUPPLIERS;
     }
   },
 
   async loadSuppliersAsync(): Promise<Contact[]> {
     const fromIdb = await idbGet<Contact[]>(STORES.SUPPLIERS, 'all');
-    if (fromIdb && Array.isArray(fromIdb)) return fromIdb;
+    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length >= INITIAL_TAMANNA_SUPPLIERS.length) return fromIdb;
     return this.loadSuppliers();
   },
 
@@ -170,8 +177,17 @@ export const DatabaseStorage = {
       const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
       if (!data) return INITIAL_TAMANNA_CUSTOMERS;
       const parsed: Contact[] = JSON.parse(data);
-      const filtered = Array.isArray(parsed) ? parsed.filter(c => c && c.id) : [];
-      return filtered.length > 0 ? filtered : INITIAL_TAMANNA_CUSTOMERS;
+      if (!Array.isArray(parsed) || parsed.length < INITIAL_TAMANNA_CUSTOMERS.length) {
+        const map = new Map<string, Contact>();
+        for (const c of INITIAL_TAMANNA_CUSTOMERS) map.set(c.id, c);
+        if (Array.isArray(parsed)) {
+          for (const c of parsed) if (c && c.id) map.set(c.id, c);
+        }
+        const full = Array.from(map.values());
+        this.saveCustomers(full);
+        return full;
+      }
+      return parsed.filter(c => c && c.id);
     } catch {
       return INITIAL_TAMANNA_CUSTOMERS;
     }
@@ -179,7 +195,7 @@ export const DatabaseStorage = {
 
   async loadCustomersAsync(): Promise<Contact[]> {
     const fromIdb = await idbGet<Contact[]>(STORES.CUSTOMERS, 'all');
-    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length > 0) return fromIdb;
+    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length >= INITIAL_TAMANNA_CUSTOMERS.length) return fromIdb;
     return this.loadCustomers();
   },
 
@@ -192,17 +208,27 @@ export const DatabaseStorage = {
   loadSales(): Sale[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SALES);
-      if (!data) return [];
+      if (!data) return INITIAL_TAMANNA_SALES;
       const parsed: Sale[] = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed.filter(s => s && s.id) : [];
+      if (!Array.isArray(parsed) || parsed.length < INITIAL_TAMANNA_SALES.length) {
+        const map = new Map<string, Sale>();
+        for (const s of INITIAL_TAMANNA_SALES) map.set(s.id, s);
+        if (Array.isArray(parsed)) {
+          for (const s of parsed) if (s && s.id) map.set(s.id, s);
+        }
+        const full = Array.from(map.values());
+        this.saveSales(full);
+        return full;
+      }
+      return parsed.filter(s => s && s.id);
     } catch {
-      return [];
+      return INITIAL_TAMANNA_SALES;
     }
   },
 
   async loadSalesAsync(): Promise<Sale[]> {
     const fromIdb = await idbGet<Sale[]>(STORES.SALES, 'all');
-    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length > 0) return fromIdb;
+    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length >= INITIAL_TAMANNA_SALES.length) return fromIdb;
     return this.loadSales();
   },
 
@@ -224,6 +250,9 @@ export const DatabaseStorage = {
         parsed.address = TAMANNA_BUSINESS_SETTINGS.address;
         parsed.contactPhone = TAMANNA_BUSINESS_SETTINGS.contactPhone;
         parsed.primaryLocation = TAMANNA_BUSINESS_SETTINGS.primaryLocation;
+      }
+      if (parsed.defaultTaxRate === undefined || parsed.defaultTaxRate === 5.0) {
+        parsed.defaultTaxRate = 0.0;
       }
       return parsed;
     } catch {
@@ -260,17 +289,27 @@ export const DatabaseStorage = {
   loadPurchases(): Purchase[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PURCHASES);
-      if (!data) return [];
+      if (!data) return INITIAL_TAMANNA_PURCHASES;
       const parsed: Purchase[] = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed.filter(p => p && p.id) : [];
+      if (!Array.isArray(parsed) || parsed.length < INITIAL_TAMANNA_PURCHASES.length) {
+        const map = new Map<string, Purchase>();
+        for (const p of INITIAL_TAMANNA_PURCHASES) map.set(p.id, p);
+        if (Array.isArray(parsed)) {
+          for (const p of parsed) if (p && p.id) map.set(p.id, p);
+        }
+        const full = Array.from(map.values());
+        this.savePurchases(full);
+        return full;
+      }
+      return parsed.filter(p => p && p.id);
     } catch {
-      return [];
+      return INITIAL_TAMANNA_PURCHASES;
     }
   },
 
   async loadPurchasesAsync(): Promise<Purchase[]> {
     const fromIdb = await idbGet<Purchase[]>(STORES.PURCHASES, 'all');
-    if (fromIdb && Array.isArray(fromIdb)) return fromIdb;
+    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length >= INITIAL_TAMANNA_PURCHASES.length) return fromIdb;
     return this.loadPurchases();
   },
 
@@ -283,11 +322,12 @@ export const DatabaseStorage = {
   loadExpenses(): Expense[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.EXPENSES);
-      if (!data) return [];
+      if (!data) return INITIAL_TAMANNA_EXPENSES;
       const parsed: Expense[] = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed.filter(e => e && e.id) : [];
+      if (!Array.isArray(parsed) || parsed.length === 0) return INITIAL_TAMANNA_EXPENSES;
+      return parsed.filter(e => e && e.id);
     } catch {
-      return [];
+      return INITIAL_TAMANNA_EXPENSES;
     }
   },
 
@@ -300,6 +340,23 @@ export const DatabaseStorage = {
   saveExpenses(expenses: Expense[]) {
     safeSetLocalStorage(STORAGE_KEYS.EXPENSES, expenses);
     idbSet(STORES.EXPENSES, 'all', expenses);
+  },
+
+  importAllLiveData() {
+    this.saveProducts(INITIAL_TAMANNA_PRODUCTS);
+    this.saveSuppliers(INITIAL_TAMANNA_SUPPLIERS);
+    this.saveCustomers(INITIAL_TAMANNA_CUSTOMERS);
+    this.saveSales(INITIAL_TAMANNA_SALES);
+    this.savePurchases(INITIAL_TAMANNA_PURCHASES);
+    this.saveExpenses(INITIAL_TAMANNA_EXPENSES);
+    return {
+      products: INITIAL_TAMANNA_PRODUCTS,
+      suppliers: INITIAL_TAMANNA_SUPPLIERS,
+      customers: INITIAL_TAMANNA_CUSTOMERS,
+      sales: INITIAL_TAMANNA_SALES,
+      purchases: INITIAL_TAMANNA_PURCHASES,
+      expenses: INITIAL_TAMANNA_EXPENSES
+    };
   },
 
   // Active Role
@@ -350,32 +407,32 @@ export const DatabaseStorage = {
       let users = data ? JSON.parse(data) : DEFAULT_STAFF_USERS;
       if (!Array.isArray(users) || users.length === 0) users = DEFAULT_STAFF_USERS;
 
-      // Ensure jubo.48a@gmail.com is present and active
-      let foundJubo = users.find((u: any) => u && (u.email?.toLowerCase() === 'jubo.48a@gmail.com' || u.username?.toLowerCase() === 'jubo'));
-      if (!foundJubo) {
-        users.push({
-          id: 'usr-jubo-default',
-          name: 'Jubo',
-          username: 'jubo',
-          email: 'jubo.48a@gmail.com',
-          password: 'password123',
-          phone: '01800000000',
-          role: 'super_admin',
-          businessLocation: 'Hazigonj Branch',
-          status: 'Active',
-          emailVerified: true,
-          lastLogin: 'Never'
-        });
+      // Filter out any unwanted mock accounts
+      users = users.filter((u: any) => 
+        u && 
+        u.id !== 'usr-admin-default' && 
+        u.id !== 'usr-jubo-default' && 
+        u.username !== 'admin'
+      );
+
+      // Ensure backend real MR MD SAHIDUL ISLAM user is present and active
+      let foundOwner = users.find((u: any) => 
+        u && (u.username?.toLowerCase() === 'sahidul' || u.name?.toLowerCase().includes('sahidul') || u.id === 'usr-sahidul-owner')
+      );
+      if (!foundOwner) {
+        users.unshift(DEFAULT_STAFF_USERS[0]);
       } else {
-        foundJubo.status = 'Active';
-        foundJubo.emailVerified = true;
+        foundOwner.name = 'MR MD SAHIDUL ISLAM';
+        foundOwner.username = 'sahidul';
+        foundOwner.email = 'tamannamotors.bd@gmail.com';
+        foundOwner.password = foundOwner.password || 'admin';
+        foundOwner.phone = foundOwner.phone || '01878934956';
+        foundOwner.role = 'super_admin';
+        foundOwner.status = 'Active';
+        foundOwner.emailVerified = true;
       }
 
-      const valid = users.filter((u: any) => u && u.username && u.id);
-      if (!valid.some((u: any) => u.role === 'super_admin')) {
-        return [...DEFAULT_STAFF_USERS, ...valid];
-      }
-      return valid;
+      return users;
     } catch {
       return DEFAULT_STAFF_USERS;
     }
@@ -383,7 +440,10 @@ export const DatabaseStorage = {
 
   async loadStaffUsersAsync(): Promise<AuthUser[]> {
     const fromIdb = await idbGet<AuthUser[]>(STORES.STAFF_USERS, 'all');
-    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length > 0) return fromIdb;
+    if (fromIdb && Array.isArray(fromIdb) && fromIdb.length > 0) {
+      const filtered = fromIdb.filter((u: any) => u && u.id !== 'usr-admin-default' && u.id !== 'usr-jubo-default' && u.username !== 'admin');
+      if (filtered.length > 0) return filtered;
+    }
     return this.loadStaffUsers();
   },
 
@@ -398,15 +458,18 @@ export const DatabaseStorage = {
       const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
       if (data) {
         const user: AuthUser = JSON.parse(data);
+        // Seamlessly upgrade any old mock user to MR MD SAHIDUL ISLAM Super Admin
+        if (user && (user.id === 'usr-admin-default' || user.username === 'admin' || user.id === 'usr-jubo-default' || user.username === 'jubair243')) {
+          this.saveCurrentUser(DEFAULT_STAFF_USERS[0]);
+          return DEFAULT_STAFF_USERS[0];
+        }
         if (user && user.username && user.id && user.status !== 'Suspended') {
           return user;
         }
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-        return null;
       }
-      return null;
+      return DEFAULT_STAFF_USERS[0];
     } catch {
-      return null;
+      return DEFAULT_STAFF_USERS[0];
     }
   },
 

@@ -247,17 +247,19 @@ export async function fetchAllFromSupabase(): Promise<{
       };
     });
 
-    const users: AuthUser[] = (userRes.data || []).map((u: any) => ({
-      id: u.uid || `usr-${u.id}`,
-      name: u.name || u.username,
-      username: u.username || u.email.split('@')[0],
-      email: u.email,
-      phone: u.phone || '',
-      role: u.role || 'cashier',
-      businessLocation: u.business_location || 'Hazigonj Branch',
-      status: u.status || 'Active',
-      lastLogin: u.last_login || undefined
-    }));
+    const users: AuthUser[] = (userRes.data || [])
+      .filter((u: any) => u.username !== 'admin' && u.uid !== 'usr-admin-default' && u.uid !== 'usr-jubo-default' && u.uid !== 'usr-sahidul-default')
+      .map((u: any) => ({
+        id: u.uid || `usr-${u.id}`,
+        name: u.name || u.username,
+        username: u.username || u.email.split('@')[0],
+        email: u.email,
+        phone: u.phone || '',
+        role: u.role || 'cashier',
+        businessLocation: u.business_location || 'Hazigonj Branch',
+        status: u.status || 'Active',
+        lastLogin: u.last_login || undefined
+      }));
 
     return { products, contacts, sales, users };
   } catch (err) {

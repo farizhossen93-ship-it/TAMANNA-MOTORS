@@ -4,7 +4,7 @@ export const TRANSLATIONS = {
   en: {
     // Branding
     businessName: "TAMANNA MOTORS",
-    businessSubtitle: "Motorcycle Spare Parts & Service Management",
+    businessSubtitle: "Excavator & Heavy Machinery Spare Parts Management",
     systemName: "Tamanna Motors POS & Inventory",
 
     // Common
@@ -105,7 +105,7 @@ export const TRANSLATIONS = {
     // Dashboard
     dashboard: {
       title: "Business Overview Dashboard",
-      subtitle: "Real-time motor parts sales, spare inventory, and shop cashflow.",
+      subtitle: "Real-time excavator parts sales, spare inventory, and shop cashflow.",
       totalSales: "Total Sales",
       netSales: "Net Sales",
       invoiceDue: "Invoice Due",
@@ -145,7 +145,7 @@ export const TRANSLATIONS = {
 
     // Add Product Modal & Barcode
     productModal: {
-      titleAdd: "Add New Motor Spare Part",
+      titleAdd: "Add New Excavator & Motor Spare Part",
       titleEdit: "Update Product Information",
       barcodeScanner: "Barcode Scanner & Auto-Fill",
       scanWithCamera: "Scan via Camera",
@@ -183,7 +183,7 @@ export const TRANSLATIONS = {
       tendered: "Cash Tendered",
       changeDue: "Change Due",
       receiptTitle: "TAMANNA MOTORS",
-      receiptSubtitle: "Genuine Motorcycle Spare Parts & Workshop",
+      receiptSubtitle: "Genuine Excavator & Heavy Machinery Spare Parts",
       receiptFooter: "Thank you for shopping at Tamanna Motors! Genuine parts guaranteed."
     }
   },
@@ -191,7 +191,7 @@ export const TRANSLATIONS = {
   bn: {
     // Branding
     businessName: "তামান্না মোটরস",
-    businessSubtitle: "মোটরসাইকেল পার্টস ও সার্ভিস ম্যানেজমেন্ট",
+    businessSubtitle: "এক্সকাভেটর ও হেভি ইকুইপমেন্ট পার্টস ম্যানেজমেন্ট",
     systemName: "তামান্না মোটরস পিওএস ও ইনভেন্টরি",
 
     // Common
@@ -292,7 +292,7 @@ export const TRANSLATIONS = {
     // Dashboard
     dashboard: {
       title: "ব্যবসার সার্বিক ড্যাশবোর্ড",
-      subtitle: "রিয়েল-টাইম মোটরসাইকেল পার্টস বিক্রয়, ইনভেন্টরি স্টক ও ক্যাশফ্লো।",
+      subtitle: "রিয়েল-টাইম এক্সকাভেটর পার্টস বিক্রয়, ইনভেন্টরি স্টক ও ক্যাশফ্লো।",
       totalSales: "মোট বিক্রয়",
       netSales: "নিট বিক্রয়",
       invoiceDue: "বকেয়া চালান",
@@ -332,7 +332,7 @@ export const TRANSLATIONS = {
 
     // Add Product Modal & Barcode
     productModal: {
-      titleAdd: "নতুন মোটর পার্টস পণ্য যোগ করুন",
+      titleAdd: "নতুন এক্সকাভেটর ও মোটর পার্টস পণ্য যোগ করুন",
       titleEdit: "পণ্যের তথ্য হালনাগাদ করুন",
       barcodeScanner: "বারকোড স্ক্যানার ও অটো-ফিল",
       scanWithCamera: "ক্যামেরা দিয়ে স্ক্যান করুন",
@@ -370,7 +370,7 @@ export const TRANSLATIONS = {
       tendered: "গ্রাহক প্রদত্ত নগদ টাকা",
       changeDue: "ফেরতযোগ্য টাকা",
       receiptTitle: "তামান্না মোটরস",
-      receiptSubtitle: "জেনুইন মোটরসাইকেল পার্টস ও ওয়ার্কশপ",
+      receiptSubtitle: "জেনুইন এক্সকাভেটর পার্টস ও হেভি ইকুইপমেন্ট",
       receiptFooter: "তামান্না মোটরস থেকে কেনার জন্য ধন্যবাদ! জেনুইন পার্টসের নিশ্চয়তা।"
     }
   }

@@ -54,6 +54,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   const t = TRANSLATIONS[lang];
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('cust-walkin');
+  const [walkInName, setWalkInName] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -144,7 +145,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
     }
   };
 
-  const taxRate = 0.05; // 5% VAT
+  const taxRate = businessSettings?.defaultTaxRate !== undefined ? (businessSettings.defaultTaxRate / 100) : 0.00; // 0% Tax / VAT default
   const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => {
       const price = item.customPrice ?? item.product.sellingPrice;
@@ -192,11 +193,15 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
     const finalChange = Math.max(0, actualPaid - grandTotal);
     const paymentStatus: 'Paid' | 'Partial' | 'Due' = calculatedDue <= 0 ? 'Paid' : actualPaid > 0 ? 'Partial' : 'Due';
 
+    const finalCustomerName = (selectedCustomerId === 'cust-walkin' && walkInName.trim())
+      ? walkInName.trim()
+      : (walkInName.trim() || currentCustomer.name);
+
     const newSaleRecord: Sale = {
       id: `sale-${Date.now()}`,
       invoiceNo,
       type: 'pos',
-      customerName: currentCustomer.name,
+      customerName: finalCustomerName,
       customerPhone: customerPhone.trim() || currentCustomer.phone || '',
       businessLocation: branchLocation,
       paymentStatus,
@@ -228,7 +233,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
 
     const saleInfo = {
       invoiceNo,
-      customerName: currentCustomer.name,
+      customerName: finalCustomerName,
       items: [...cart],
       subtotal,
       taxAmount,
@@ -355,9 +360,9 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
       </header>
 
       {/* POS Main Content */}
-      <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
+      <div className="flex flex-1 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Left: Motor Parts Catalog Grid */}
-        <div className="flex flex-1 flex-col overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 sm:p-4">
+        <div className="flex flex-1 flex-col min-h-[400px] lg:min-h-0 lg:overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 sm:p-4">
           <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -461,7 +466,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
         </div>
 
         {/* Right: Cart & Checkout Section */}
-        <div className="flex w-full lg:w-96 flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl max-h-[50vh] lg:max-h-full">
+        <div className="flex w-full lg:w-96 flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl shrink-0">
           {/* Customer Selection */}
           <div className="border-b border-slate-200 dark:border-slate-800 p-3.5 space-y-2">
             <div className="flex items-center justify-between text-xs">
@@ -511,17 +516,27 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
               <div className="flex items-center gap-2 pt-0.5">
                 <input
                   type="text"
-                  value={currentCustomer.name}
-                  readOnly
-                  className="w-1/2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate"
-                  title="Customer Name"
+                  value={selectedCustomerId === 'cust-walkin' ? walkInName : currentCustomer.name}
+                  onChange={(e) => {
+                    if (selectedCustomerId === 'cust-walkin') {
+                      setWalkInName(e.target.value);
+                    }
+                  }}
+                  readOnly={selectedCustomerId !== 'cust-walkin'}
+                  placeholder={lang === 'bn' ? 'ক্রেতার নাম (Walk-in Name)' : 'Customer Name (Walk-in)'}
+                  className={`w-1/2 rounded-lg border px-2.5 py-1 text-[11px] font-bold focus:outline-none transition-colors ${
+                    selectedCustomerId === 'cust-walkin'
+                      ? 'border-emerald-500/50 bg-emerald-50/40 dark:bg-emerald-950/30 text-slate-900 dark:text-white placeholder:text-slate-400'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300'
+                  }`}
+                  title={lang === 'bn' ? 'ওয়াক-ইন ক্রেতার নাম' : 'Walk-in Customer Name'}
                 />
                 <input
                   type="text"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder={lang === 'bn' ? 'ফোন নম্বর (+ Name)' : 'Phone number (+ Name)'}
-                  className="w-1/2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-800 dark:text-white focus:outline-none"
+                  placeholder={lang === 'bn' ? 'ফোন নম্বর (Phone)' : 'Phone number'}
+                  className="w-1/2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-mono text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -620,10 +635,12 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                   <span className="font-mono tabular-nums">-৳{discountAmount.toFixed(0)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span>{t.tax} (5%):</span>
-                <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">৳{taxAmount.toFixed(0)}</span>
-              </div>
+              {taxRate > 0 && taxAmount > 0 && (
+                <div className="flex justify-between">
+                  <span>{t.tax} ({(taxRate * 100).toFixed(0)}%):</span>
+                  <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">৳{taxAmount.toFixed(0)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white pt-1 border-t border-slate-200 dark:border-slate-800">
                 <span>{t.grandTotal}:</span>
                 <span className="font-mono tabular-nums text-emerald-800 dark:text-emerald-400">৳{grandTotal.toFixed(0)}</span>

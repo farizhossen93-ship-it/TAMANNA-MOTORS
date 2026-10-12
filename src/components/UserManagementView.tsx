@@ -61,7 +61,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setName('');
     setEmail('');
     setUsername('');
-    setPassword('password123');
+    setPassword('');
     setPhone('');
     setRole('cashier');
     setLocation('Hazigonj Branch');
@@ -74,7 +74,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setName(user.name);
     setEmail(user.email);
     setUsername(user.username);
-    setPassword(user.password || 'password123');
+    setPassword(user.password || '');
     setPhone(user.phone || '');
     setRole(user.role);
     setLocation(user.businessLocation);
@@ -140,6 +140,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
   const handleConfirmDelete = () => {
     if (!deleteCandidate) return;
+
+    if (deleteCandidate.role === 'super_admin') {
+      showNotification(
+        lang === 'bn' 
+          ? 'সুপার অ্যাডমিন অ্যাকাউন্ট মুছে ফেলা সম্পূর্ণ নিষিদ্ধ!' 
+          : 'Super Admin accounts cannot be deleted!'
+      );
+      setDeleteCandidate(null);
+      return;
+    }
 
     if (deleteCandidate.id === currentUser?.id) {
       showNotification(lang === 'bn' ? 'বর্তমান সক্রিয় লগইন করা অ্যাকাউন্ট মোছা যাবে না!' : 'Cannot delete currently active logged in account!');
@@ -292,6 +302,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       header: lang === 'bn' ? 'অবস্থা ও অনুমোদন' : 'Status & Authorization',
       accessorKey: 'status',
       cell: (row) => {
+        if (row.role === 'super_admin') {
+          return (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 dark:border-purple-800 shadow-2xs select-none"
+              title={lang === 'bn' ? 'সুপার অ্যাডমিন সর্বদা সুরক্ষিত ও সক্রিয় (স্থগিত করা নিষিদ্ধ)' : 'Super Admin account is permanently protected from suspension'}
+            >
+              <Shield className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+              <span>{lang === 'bn' ? 'সক্রিয় (স্থগিত নিষিদ্ধ)' : 'Active (Protected)'}</span>
+            </span>
+          );
+        }
+
         if (row.status === 'Pending Approval') {
           return (
             <button
@@ -497,18 +519,28 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    {lang === 'bn' ? 'অ্যাকাউন্টের অবস্থা' : 'Account Status'}
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                    <span>{lang === 'bn' ? 'অ্যাকাউন্টের অবস্থা' : 'Account Status'}</span>
+                    {(editingUser?.role === 'super_admin' || role === 'super_admin') && (
+                      <span className="text-[10px] text-purple-600 dark:text-purple-400 font-normal">
+                        ({lang === 'bn' ? 'সুপার অ্যাডমিন সর্বদা সক্রিয়' : 'Super Admin is always Active'})
+                      </span>
+                    )}
                   </label>
                   <select
-                    value={status}
+                    value={editingUser?.role === 'super_admin' || role === 'super_admin' ? 'Active' : status}
+                    disabled={editingUser?.role === 'super_admin' || role === 'super_admin'}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-hidden disabled:opacity-75 disabled:cursor-not-allowed"
                   >
                     <option value="Active">{lang === 'bn' ? 'সক্রিয় (Active)' : 'Active'}</option>
-                    <option value="Suspended">{lang === 'bn' ? 'স্থগিত (Suspended)' : 'Suspended'}</option>
-                    <option value="Pending Verification">{lang === 'bn' ? 'ইমেইল যাচাই অপেক্ষমান (Pending Verification)' : 'Pending Verification'}</option>
-                    <option value="Pending Approval">{lang === 'bn' ? 'অনুমোদন অপেক্ষমান (Pending Approval)' : 'Pending Approval'}</option>
+                    {editingUser?.role !== 'super_admin' && role !== 'super_admin' && (
+                      <>
+                        <option value="Suspended">{lang === 'bn' ? 'স্থগিত (Suspended)' : 'Suspended'}</option>
+                        <option value="Pending Verification">{lang === 'bn' ? 'ইমেইল যাচাই অপেক্ষমান (Pending Verification)' : 'Pending Verification'}</option>
+                        <option value="Pending Approval">{lang === 'bn' ? 'অনুমোদন অপেক্ষমান (Pending Approval)' : 'Pending Approval'}</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>

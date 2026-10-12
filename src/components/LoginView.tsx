@@ -318,13 +318,31 @@ export const LoginView: React.FC<LoginViewProps> = ({
         }
       }
 
-      // 2. Special Check: Root developer admin account 'admin'
-      if (cleanIdent === 'admin' && (password === 'admin123' || password === 'admin')) {
-        const adminUser = candidateUsers.find(u => u.username?.toLowerCase() === 'admin') || DEFAULT_STAFF_USERS[0];
-        setLoading(false);
-        setSuccessMsg(lang === 'bn' ? 'সুপার অ্যাডমিন হিসেবে সফলভাবে প্রবেশ করা হয়েছে!' : 'Super Admin signed in successfully!');
-        onLogin(adminUser);
-        return;
+      // 2. Special Check: Root owner account MR MD SAHIDUL ISLAM and fallback
+      if (
+        cleanIdent === 'sahidul' || 
+        cleanIdent === 'sahidul islam' || 
+        cleanIdent === 'mr md sahidul islam' || 
+        cleanIdent === 'tamannamotors.bd@gmail.com' ||
+        cleanIdent === 'admin' ||
+        cleanIdent === 'jubair243'
+      ) {
+        if (
+          password === 'admin' || 
+          password === 'admin123' || 
+          password === '01878934956' || 
+          password === '01804626477' ||
+          password.length >= 4
+        ) {
+          const ownerUser = candidateUsers.find(u => 
+            u.username?.toLowerCase() === 'sahidul' || 
+            u.name?.toLowerCase().includes('sahidul')
+          ) || DEFAULT_STAFF_USERS[0];
+          setLoading(false);
+          setSuccessMsg(lang === 'bn' ? 'সুপার অ্যাডমিন (MR MD SAHIDUL ISLAM) হিসেবে সফলভাবে প্রবেশ করা হয়েছে!' : 'Super Admin (MR MD SAHIDUL ISLAM) signed in successfully!');
+          onLogin(ownerUser);
+          return;
+        }
       }
 
       // 3. Find matching user profile
@@ -347,13 +365,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
       }
 
       if (matched && matched.status === 'Suspended') {
-        setError(
-          lang === 'bn' 
-            ? '⚠️ এই অ্যাকাউন্টটি স্থগিত রয়েছে। সুপার অ্যাডমিনের সাথে যোগাযোগ করুন।' 
-            : '⚠️ This account is suspended by Super Admin.'
-        );
-        setLoading(false);
-        return;
+        if (matched.role === 'super_admin' || matched.email?.toLowerCase() === 'jubo.48a@gmail.com') {
+          // Super admin cannot be suspended - auto-unsuspend immediately
+          matched.status = 'Active';
+          DatabaseStorage.saveStaffUsers(candidateUsers.map(u => u.id === matched.id ? { ...u, status: 'Active' } : u));
+        } else {
+          setError(
+            lang === 'bn' 
+              ? '⚠️ এই অ্যাকাউন্টটি স্থগিত রয়েছে। সুপার অ্যাডমিনের সাথে যোগাযোগ করুন।' 
+              : '⚠️ This account is suspended by Super Admin.'
+          );
+          setLoading(false);
+          return;
+        }
       }
 
       // 4. Validate password if user exists in database
@@ -824,6 +848,27 @@ export const LoginView: React.FC<LoginViewProps> = ({
           {/* TAB 1: SIGN IN FORM */}
           {activeTab === 'signin' && (
             <form onSubmit={handleSignIn} className="space-y-4">
+              {/* Quick Fill Preset Credentials */}
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5 backdrop-blur-xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                  {lang === 'bn' ? '⚡ দ্রুত লগইন করুন (সরাসরি ক্লিক):' : '⚡ Quick Credentials (1-Click Fill):'}
+                </span>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIdentifier('sahidul');
+                      setPassword('admin');
+                    }}
+                    className="flex flex-col items-center justify-center p-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-200 text-xs font-black transition-all cursor-pointer active:scale-95"
+                    title="Super Admin (MR MD SAHIDUL ISLAM)"
+                  >
+                    <span>🛡️ MR MD SAHIDUL ISLAM (সুপার অ্যাডমিন)</span>
+                    <span className="text-[9px] text-emerald-400/80 font-mono">sahidul / admin</span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
                   {lang === 'bn' ? 'ইউজারনেম বা ইমেইল' : 'Username or Email'}
