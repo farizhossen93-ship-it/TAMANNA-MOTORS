@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Ensure password column exists if table was already created
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password TEXT;
+
 -- ২.২ মোটর পার্টস ও পণ্য তালিকা (Products & Spare Parts Catalog)
 CREATE TABLE IF NOT EXISTS public.products (
   id TEXT PRIMARY KEY,

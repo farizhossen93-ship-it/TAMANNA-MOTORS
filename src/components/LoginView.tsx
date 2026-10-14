@@ -277,9 +277,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
       try {
         const res = await fetch('/api/users');
         if (res.ok) {
-          const list = await res.json();
-          if (Array.isArray(list) && list.length > 0) {
-            dbUsers = list;
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const list = await res.json();
+            if (Array.isArray(list) && list.length > 0) {
+              dbUsers = list;
+            }
           }
         }
       } catch (e) {
@@ -313,7 +316,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
         );
       });
 
-      const matchedLocalUser = staffUsers.find((u: AuthUser) => {
+      const currentStoredStaff = DatabaseStorage.loadStaffUsers();
+      const allStaff = [...staffUsers, ...currentStoredStaff];
+      const matchedLocalUser = allStaff.find((u: AuthUser) => {
         const uName = (u.username || '').toLowerCase();
         const uEmail = (u.email || '').toLowerCase();
         const uPhone = (u.phone || '').replace(/\D/g, '');
@@ -330,17 +335,38 @@ export const LoginView: React.FC<LoginViewProps> = ({
       const matchedSbUser = sbUsers.find((u: any) => {
         const uName = (u.username || '').toLowerCase();
         const uEmail = (u.email || '').toLowerCase();
+        const uPhone = (u.phone || '').replace(/\D/g, '');
         const fullName = (u.name || '').toLowerCase();
-        return uName === cleanIdent || uEmail === cleanIdent || fullName === cleanIdent;
+        return (
+          uName === cleanIdent ||
+          uEmail === cleanIdent ||
+          (cleanPhone.length >= 6 && uPhone.includes(cleanPhone)) ||
+          fullName === cleanIdent
+        );
       });
 
       const matchedDefault = DEFAULT_STAFF_USERS.find((u: AuthUser) => {
         const uName = (u.username || '').toLowerCase();
         const uEmail = (u.email || '').toLowerCase();
-        return uName === cleanIdent || uEmail === cleanIdent;
+        const uPhone = (u.phone || '').replace(/\D/g, '');
+        return uName === cleanIdent || uEmail === cleanIdent || (cleanPhone.length >= 6 && uPhone.includes(cleanPhone));
       });
 
-      const matchedUser = matchedDbUser || matchedLocalUser || matchedDefault || matchedSbUser;
+      let matchedUser = matchedDbUser || matchedLocalUser || matchedDefault || matchedSbUser;
+
+      // Special fallback for owner account
+      const isSahidulOwner = 
+        cleanIdent === 'sahidul' || 
+        cleanIdent === 'tamannamotors158@gmail.com' ||
+        cleanPhone === '01626666906' ||
+        cleanPhone === '8801626666906' ||
+        cleanPhone.endsWith('1626666906') ||
+        (matchedUser?.email && matchedUser.email.toLowerCase() === 'tamannamotors158@gmail.com') ||
+        (matchedUser?.username && matchedUser.username.toLowerCase() === 'sahidul');
+
+      if (!matchedUser && isSahidulOwner) {
+        matchedUser = DEFAULT_STAFF_USERS[0];
+      }
 
       if (!matchedUser) {
         setError(
@@ -363,29 +389,41 @@ export const LoginView: React.FC<LoginViewProps> = ({
         return;
       }
 
-      // Step 3: Strict Password Verification against the ACTUAL account password
-      const expectedPass = matchedDbUser?.password || matchedLocalUser?.password || matchedDefault?.password || matchedUser.password || (
-        (cleanIdent === 'sahidul' || cleanIdent === 'tamannamotors158@gmail.com') ? 'khoka420' : ''
-      );
-
+      // Step 3: Strict Password Verification against the ACTUAL account password (including Supabase Cloud Vault)
       let isPasswordValid = false;
-      if (expectedPass && cleanPass === expectedPass) {
-        isPasswordValid = true;
+      if (isSahidulOwner) {
+        // Owner Sahidul's password is unequivocally 'khoka420'
+        if (cleanPass === 'khoka420') {
+          isPasswordValid = true;
+        }
       } else {
-        // Also check if valid via Supabase Auth
+        // Check Supabase Cloud Vault
+        let vaultPass = '';
         try {
-          const authEmail = matchedUser.email || (cleanIdent.includes('@') ? cleanIdent : '');
-          if (authEmail) {
-            const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-              email: authEmail,
-              password: cleanPass
-            });
-            if (!authErr && authData?.session) {
-              isPasswordValid = true;
+          const vault = await SupabaseSync.fetchCredentialsVault();
+          vaultPass = vault[cleanIdent] || 
+            (matchedUser ? (vault[matchedUser.username?.toLowerCase()] || vault[matchedUser.email?.toLowerCase()] || (cleanPhone ? vault[cleanPhone] : '')) : '');
+        } catch {}
+
+        const expectedPass = vaultPass || matchedUser?.password || matchedDbUser?.password || matchedLocalUser?.password || matchedDefault?.password;
+        if (expectedPass && cleanPass === expectedPass) {
+          isPasswordValid = true;
+        } else {
+          // Also check if valid via Supabase Auth
+          try {
+            const authEmail = matchedUser.email || (cleanIdent.includes('@') ? cleanIdent : '');
+            if (authEmail) {
+              const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+                email: authEmail,
+                password: cleanPass
+              });
+              if (!authErr && authData?.session) {
+                isPasswordValid = true;
+              }
             }
+          } catch (e) {
+            console.warn('Supabase auth sign in check:', e);
           }
-        } catch (e) {
-          console.warn('Supabase auth sign in check:', e);
         }
       }
 
@@ -403,12 +441,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
       const authenticatedUser: AuthUser = {
         id: String(matchedUser.uid || matchedUser.id || '9e4e8c95-81a0-4f73-9638-c6340427918e'),
         uid: String(matchedUser.uid || matchedUser.id || '9e4e8c95-81a0-4f73-9638-c6340427918e'),
-        name: matchedUser.name || 'Md Sahidul islam',
-        username: matchedUser.username || cleanIdent,
-        email: matchedUser.email || (cleanIdent.includes('@') ? cleanIdent : 'tamannamotors158@gmail.com'),
+        name: isSahidulOwner ? 'Md Sahidul islam' : (matchedUser.name || 'Staff User'),
+        username: isSahidulOwner ? 'sahidul' : (matchedUser.username || cleanIdent),
+        email: isSahidulOwner ? 'tamannamotors158@gmail.com' : (matchedUser.email || cleanIdent),
         password: cleanPass,
-        phone: matchedUser.phone || '+8801626666906',
-        role: (matchedUser.role || 'super_admin') as UserRole,
+        phone: isSahidulOwner ? '+8801626666906' : (matchedUser.phone || '+8801626666906'),
+        role: isSahidulOwner ? 'super_admin' : ((matchedUser.role || 'cashier') as UserRole),
         businessLocation: matchedUser.business_location || matchedUser.businessLocation || 'Hazigonj Branch',
         status: matchedUser.status || 'Active',
         emailVerified: true,

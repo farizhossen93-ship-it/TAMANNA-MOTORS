@@ -269,25 +269,96 @@ export const SupabaseSync = {
     }
   },
 
+  // User Credentials Vault in Supabase app_settings
+  async fetchCredentialsVault(): Promise<Record<string, string>> {
+    const defaultVault: Record<string, string> = {
+      'sahidul': 'khoka420',
+      'tamannamotors158@gmail.com': 'khoka420',
+      '+8801626666906': 'khoka420',
+      '01626666906': 'khoka420',
+      '1626666906': 'khoka420'
+    };
+    if (!isSupabaseConfigured()) return defaultVault;
+    try {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'user_credentials_vault')
+        .single();
+      if (!error && data?.value) {
+        const parsed = JSON.parse(data.value);
+        return { ...defaultVault, ...parsed };
+      }
+    } catch (e) {
+      console.warn('Error fetching credentials vault:', e);
+    }
+    return defaultVault;
+  },
+
+  async saveUserCredentials(user: AuthUser): Promise<boolean> {
+    if (!isSupabaseConfigured() || !user) return false;
+    try {
+      const vault = await this.fetchCredentialsVault();
+      const pass = user.password || (user.username === 'sahidul' || user.email === 'tamannamotors158@gmail.com' ? 'khoka420' : '');
+      if (!pass) return false;
+
+      if (user.username) vault[user.username.trim().toLowerCase()] = pass;
+      if (user.email) vault[user.email.trim().toLowerCase()] = pass;
+      if (user.id) vault[user.id] = pass;
+      if (user.uid) vault[user.uid] = pass;
+      if (user.phone) {
+        const cleanPhone = user.phone.replace(/\D/g, '');
+        if (cleanPhone) vault[cleanPhone] = pass;
+      }
+
+      const { error } = await supabase.from('app_settings').upsert({
+        key: 'user_credentials_vault',
+        value: JSON.stringify(vault),
+        updated_at: new Date().toISOString()
+      });
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
   // Staff Users Sync
   async fetchUsers(): Promise<AuthUser[] | null> {
     if (!isSupabaseConfigured()) return null;
     try {
-      const { data, error } = await supabase.from('users').select('*');
-      if (error || !data) return null;
-      return data.map((u: any) => ({
-        id: u.uid || `usr-${u.id}`,
-        name: u.name || u.username,
-        username: u.username,
-        email: u.email,
-        password: u.password || 'admin123',
-        role: u.role || 'cashier',
-        phone: u.phone || '',
-        businessLocation: u.business_location || 'Hazigonj Branch',
-        status: u.status || 'Active',
-        emailVerified: Boolean(u.email_verified),
-        lastLogin: u.last_login || 'Never'
-      }));
+      const [usersRes, vault] = await Promise.all([
+        supabase.from('users').select('*'),
+        this.fetchCredentialsVault()
+      ]);
+      const data = usersRes.data;
+      if (usersRes.error || !data) return null;
+
+      return data.map((u: any) => {
+        const uName = (u.username || '').toLowerCase();
+        const uEmail = (u.email || '').toLowerCase();
+        const uPhone = (u.phone || '').replace(/\D/g, '');
+        const pass = 
+          vault[uName] || 
+          vault[uEmail] || 
+          vault[u.uid] || 
+          (uPhone && vault[uPhone]) || 
+          u.password || 
+          (uName === 'sahidul' || uEmail === 'tamannamotors158@gmail.com' ? 'khoka420' : '');
+
+        return {
+          id: u.uid || `usr-${u.id}`,
+          name: u.name || u.username,
+          username: u.username,
+          email: u.email,
+          password: pass,
+          role: u.role || 'cashier',
+          phone: u.phone || '',
+          businessLocation: u.business_location || 'Hazigonj Branch',
+          status: u.status || 'Active',
+          emailVerified: Boolean(u.email_verified ?? true),
+          lastLogin: u.last_login || 'Never'
+        };
+      });
     } catch {
       return null;
     }
@@ -296,7 +367,13 @@ export const SupabaseSync = {
   async upsertUser(user: AuthUser): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
     try {
-      const payload: any = {
+      // 1. Always save password to cloud credentials vault in Supabase
+      if (user.password) {
+        await this.saveUserCredentials(user);
+      }
+
+      // 2. Try upserting to public.users with password column
+      const fullPayload: any = {
         uid: user.id || user.uid,
         email: user.email,
         name: user.name,
@@ -305,10 +382,21 @@ export const SupabaseSync = {
         phone: user.phone || null,
         business_location: user.businessLocation || 'Hazigonj Branch',
         status: user.status || 'Active',
-        last_login: user.lastLogin || new Date().toISOString()
+        last_login: user.lastLogin || new Date().toISOString(),
+        password: user.password || (user.username === 'sahidul' ? 'khoka420' : '')
       };
-      const { error } = await supabase.from('users').upsert(payload, { onConflict: 'uid' });
-      return !error;
+
+      const res = await supabase.from('users').upsert(fullPayload, { onConflict: 'uid' });
+      if (!res.error) return true;
+
+      // If 'password' column doesn't exist yet on public.users, strip it and upsert standard columns
+      if (res.error?.message?.includes('column') && res.error?.message?.includes('password')) {
+        delete fullPayload.password;
+        const retry = await supabase.from('users').upsert(fullPayload, { onConflict: 'uid' });
+        return !retry.error;
+      }
+
+      return false;
     } catch (e) {
       return false;
     }
@@ -318,6 +406,17 @@ export const SupabaseSync = {
     if (!isSupabaseConfigured()) return false;
     try {
       const { error } = await supabase.from('users').delete().eq('uid', uid);
+      try {
+        const vault = await this.fetchCredentialsVault();
+        if (vault[uid]) {
+          delete vault[uid];
+          await supabase.from('app_settings').upsert({
+            key: 'user_credentials_vault',
+            value: JSON.stringify(vault),
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch {}
       return !error;
     } catch {
       return false;

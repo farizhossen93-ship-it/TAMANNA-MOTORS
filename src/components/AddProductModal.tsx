@@ -263,10 +263,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     }, 'image/jpeg', 0.85);
   };
 
+  const [formError, setFormError] = useState<string | null>(null);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!name.trim() || !sku.trim()) {
-      alert(lang === 'bn' ? 'দয়া করে পণ্যের নাম ও এসকেইউ পূরণ করুন।' : 'Please fill in Product Name and SKU.');
+      setFormError(lang === 'bn' ? 'দয়া করে পণ্যের নাম ও এসকেইউ পূরণ করুন।' : 'Please fill in Product Name and SKU.');
       return;
     }
 
@@ -322,6 +325,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Error Notification */}
+        {formError && (
+          <div className="mt-3.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{formError}</span>
+          </div>
+        )}
 
         {/* 1. Barcode Scanner & Camera section */}
         <div className="mt-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 space-y-3">

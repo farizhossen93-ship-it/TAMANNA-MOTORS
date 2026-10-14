@@ -183,11 +183,23 @@ export default function App() {
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
+        const fetchApiSafe = async (endpoint: string) => {
+          try {
+            const r = await fetch(endpoint);
+            if (!r.ok) return null;
+            const ct = r.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) return null;
+            return await r.json();
+          } catch {
+            return null;
+          }
+        };
+
         const [prodRes, saleRes, contactRes, userRes, sbProds, sbSales, sbContacts, sbUsers, sbPurchases, sbExpenses] = await Promise.allSettled([
-          fetch('/api/products').then(r => r.ok ? r.json() : null),
-          fetch('/api/sales').then(r => r.ok ? r.json() : null),
-          fetch('/api/contacts').then(r => r.ok ? r.json() : null),
-          fetch('/api/users').then(r => r.ok ? r.json() : null),
+          fetchApiSafe('/api/products'),
+          fetchApiSafe('/api/sales'),
+          fetchApiSafe('/api/contacts'),
+          fetchApiSafe('/api/users'),
           SupabaseSync.fetchProducts(),
           SupabaseSync.fetchSales(),
           SupabaseSync.fetchContacts(),
@@ -203,7 +215,7 @@ export default function App() {
             name: u.name || 'Md Sahidul islam',
             username: u.username || 'sahidul',
             email: u.email || 'tamannamotors158@gmail.com',
-            password: u.password || (u.username === 'sahidul' || u.email === 'tamannamotors158@gmail.com' ? 'khoka420' : ''),
+            password: (u.username === 'sahidul' || u.email === 'tamannamotors158@gmail.com') ? 'khoka420' : (u.password || ''),
             phone: u.phone || '+8801626666906',
             role: (u.role || 'super_admin') as UserRole,
             businessLocation: u.businessLocation || u.business_location || 'Hazigonj Branch',
@@ -224,7 +236,7 @@ export default function App() {
             name: u.name || u.username,
             username: u.username,
             email: u.email || `${u.username}@tamannamotors.com`,
-            password: u.password || (u.username === 'sahidul' || u.email === 'tamannamotors158@gmail.com' ? 'khoka420' : ''),
+            password: (u.username === 'sahidul' || u.email === 'tamannamotors158@gmail.com') ? 'khoka420' : (u.password || ''),
             phone: u.phone || '01878934956',
             role: (u.role || 'super_admin') as UserRole,
             businessLocation: u.businessLocation || u.business_location || 'Hazigonj Branch',
@@ -727,7 +739,7 @@ export default function App() {
   const handleDeleteProduct = (prod: Product) => {
     const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
     if (!isSuper) {
-      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      showSyncNotice(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
       return;
     }
     const updated = products.filter(p => p.id !== prod.id);
@@ -772,7 +784,7 @@ export default function App() {
   const handleDeleteSupplier = (row: Contact) => {
     const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
     if (!isSuper) {
-      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      showSyncNotice(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
       return;
     }
     const updated = suppliers.filter(s => s.id !== row.id);
@@ -816,7 +828,7 @@ export default function App() {
   const handleDeleteCustomer = (row: Contact) => {
     const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
     if (!isSuper) {
-      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      showSyncNotice(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
       return;
     }
     const updated = customers.filter(c => c.id !== row.id);
@@ -846,7 +858,7 @@ export default function App() {
   const handleDeleteExpense = (row: Expense) => {
     const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
     if (!isSuper) {
-      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      showSyncNotice(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
       return;
     }
     const updated = expenses.filter(e => e.id !== row.id);
@@ -876,7 +888,7 @@ export default function App() {
   const handleDeletePurchase = (row: Purchase) => {
     const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
     if (!isSuper) {
-      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      showSyncNotice(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
       return;
     }
     const updated = purchases.filter(p => p.id !== row.id);
@@ -897,7 +909,7 @@ export default function App() {
   const handleDeleteTransfer = (transfer: StockTransfer) => {
     const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
     if (!isSuper) {
-      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      showSyncNotice(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
       return;
     }
     setStockTransfers(prev => prev.filter(t => t.id !== transfer.id));
@@ -927,7 +939,7 @@ export default function App() {
   const handleDeleteSale = (sale: Sale) => {
     const isSuper = currentUser?.role === 'super_admin' || userRole === 'super_admin';
     if (!isSuper) {
-      alert(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
+      showSyncNotice(lang === 'bn' ? '⚠️ শুধুমাত্র সুপার অ্যাডমিন (Super Admin) যেকোনো রেকর্ড ডিলিট করতে পারবেন।' : '⚠️ Only Super Admin has permission to delete records.');
       return;
     }
     const updated = sales.filter(s => s.id !== sale.id);

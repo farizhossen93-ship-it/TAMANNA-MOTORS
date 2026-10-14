@@ -78,6 +78,12 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
     dateStr: string;
   } | null>(null);
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   // Extract unique categories
   const categories = useMemo(() => {
     return ['All', ...new Set(products.map(p => p.category))];
@@ -98,7 +104,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
         if (existing.quantity >= product.currentStock) {
-          alert(lang === 'bn' ? `বর্তমান স্টকের চেয়ে বেশি যোগ করা সম্ভব নয় (${product.currentStock} টি)।` : `Cannot add more than available stock (${product.currentStock} units).`);
+          showToast(lang === 'bn' ? `বর্তমান স্টকের চেয়ে বেশি যোগ করা সম্ভব নয় (${product.currentStock} টি)।` : `Cannot add more than available stock (${product.currentStock} units).`);
           return prev;
         }
         return prev.map(item =>
@@ -108,7 +114,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
         );
       } else {
         if (product.currentStock <= 0) {
-          alert(lang === 'bn' ? 'এই পার্টসটি বর্তমানে স্টকে নেই।' : 'Item is currently out of stock.');
+          showToast(lang === 'bn' ? 'এই পার্টসটি বর্তমানে স্টকে নেই।' : 'Item is currently out of stock.');
           return prev;
         }
         return [...prev, { product, quantity: 1 }];
@@ -123,7 +129,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
           if (item.product.id === productId) {
             const newQty = item.quantity + delta;
             if (newQty > item.product.currentStock) {
-              alert(lang === 'bn' ? `স্টক অতিক্রম করেছে (${item.product.currentStock} টি)।` : `Cannot exceed available stock (${item.product.currentStock} units).`);
+              showToast(lang === 'bn' ? `স্টক অতিক্রম করেছে (${item.product.currentStock} টি)।` : `Cannot exceed available stock (${item.product.currentStock} units).`);
               return item;
             }
             return newQty > 0 ? { ...item, quantity: newQty } : null;
@@ -172,7 +178,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
 
   const handleCheckout = (autoPrint: boolean = false) => {
     if (cart.length === 0) {
-      alert(lang === 'bn' ? 'কার্ট খালি। পার্টস যোগ করুন।' : 'Cart is empty. Please add items to proceed.');
+      showToast(lang === 'bn' ? 'কার্ট খালি। পার্টস যোগ করুন।' : 'Cart is empty. Please add items to proceed.');
       return;
     }
 
@@ -285,7 +291,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
 
   const handlePrintCurrentDraftEstimate = () => {
     if (cart.length === 0) {
-      alert(lang === 'bn' ? 'কার্ট খালি।' : 'Cart is empty.');
+      showToast(lang === 'bn' ? 'কার্ট খালি।' : 'Cart is empty.');
       return;
     }
 
@@ -799,6 +805,14 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-2xl bg-slate-900/95 dark:bg-slate-800/95 border border-amber-500/30 text-amber-300 dark:text-amber-200 px-5 py-2.5 text-xs font-semibold shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-200">
+          <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {lastCompletedSale && (
         <ReceiptModal

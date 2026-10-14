@@ -427,6 +427,7 @@ export const DatabaseStorage = {
         foundOwner.name = 'Md Sahidul islam';
         foundOwner.username = 'sahidul';
         foundOwner.email = 'tamannamotors158@gmail.com';
+        foundOwner.password = 'khoka420';
         foundOwner.phone = '+8801626666906';
         foundOwner.role = 'super_admin';
         foundOwner.status = 'Active';

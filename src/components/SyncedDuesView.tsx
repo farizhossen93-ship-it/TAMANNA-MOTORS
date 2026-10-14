@@ -123,6 +123,8 @@ export const SyncedDuesView: React.FC<SyncedDuesViewProps> = ({
     });
   }, [dueSales, filterTab, searchQuery]);
 
+  const [formError, setFormError] = useState<string | null>(null);
+
   // Open Payment Modal
   const handleOpenPaymentModal = (sale: Sale) => {
     const currentDue = sale.invoiceDue !== undefined ? sale.invoiceDue : Math.max(0, sale.totalAmount - (sale.amountTendered || 0));
@@ -130,16 +132,18 @@ export const SyncedDuesView: React.FC<SyncedDuesViewProps> = ({
     setPaymentAmount(currentDue.toString());
     setPaymentMethod('Cash');
     setPaymentNotes('');
+    setFormError(null);
   };
 
   // Submit Due Payment
   const handleSubmitPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSaleForPayment) return;
+    setFormError(null);
 
     const payAmt = parseFloat(paymentAmount);
     if (isNaN(payAmt) || payAmt <= 0) {
-      alert(lang === 'bn' ? 'সঠিক পরিশোধিত টাকার পরিমাণ লিখুন।' : 'Please enter a valid payment amount.');
+      setFormError(lang === 'bn' ? 'সঠিক পরিশোধিত টাকার পরিমাণ লিখুন।' : 'Please enter a valid payment amount.');
       return;
     }
 
@@ -148,7 +152,7 @@ export const SyncedDuesView: React.FC<SyncedDuesViewProps> = ({
       : Math.max(0, selectedSaleForPayment.totalAmount - (selectedSaleForPayment.amountTendered || 0));
 
     if (payAmt > currentDue) {
-      alert(lang === 'bn' ? `পরিশোধিত টাকা বাকি টাকার (${currencySymbol}${currentDue.toLocaleString()}) চেয়ে বেশি হতে পারে না।` : `Payment amount cannot exceed current due of ${currencySymbol}${currentDue.toLocaleString()}`);
+      setFormError(lang === 'bn' ? `পরিশোধিত টাকা বাকি টাকার (${currencySymbol}${currentDue.toLocaleString()}) চেয়ে বেশি হতে পারে না।` : `Payment amount cannot exceed current due of ${currencySymbol}${currentDue.toLocaleString()}`);
       return;
     }
 
@@ -680,6 +684,14 @@ export const SyncedDuesView: React.FC<SyncedDuesViewProps> = ({
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
                 />
               </div>
+
+              {/* Error Alert */}
+              {formError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-xs flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>{formError}</span>
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
