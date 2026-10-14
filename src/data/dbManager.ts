@@ -3,30 +3,30 @@ import { idbSet, idbGet, idbClearStore, STORES } from './indexedDB';
 
 export const DEFAULT_STAFF_USERS: AuthUser[] = [
   {
-    id: 'usr-sahidul-owner',
-    uid: 'usr-sahidul-owner',
-    name: 'MR MD SAHIDUL ISLAM',
+    id: '9e4e8c95-81a0-4f73-9638-c6340427918e',
+    uid: '9e4e8c95-81a0-4f73-9638-c6340427918e',
+    name: 'Md Sahidul islam',
     username: 'sahidul',
-    email: 'tamannamotors.bd@gmail.com',
-    password: 'admin',
-    phone: '01878934956',
+    email: 'tamannamotors158@gmail.com',
+    password: 'khoka420',
+    phone: '+8801626666906',
     role: 'super_admin',
     businessLocation: 'Hazigonj Branch',
     status: 'Active',
     emailVerified: true,
-    lastLogin: 'Today'
+    lastLogin: '12:12 PM'
   }
 ];
 
 export const TAMANNA_BUSINESS_SETTINGS: BusinessSettings = {
   businessName: "TAMANNA MOTORS",
-  taxNumber: "BIN-002849102-0101",
+  taxNumber: "",
   defaultCurrency: "BDT (৳)",
   currencySymbol: "৳",
   financialYearStart: "July",
   defaultTaxRate: 0.0,
   primaryLocation: "Hazigonj Branch",
-  contactEmail: "tamannamotors.bd@gmail.com",
+  contactEmail: "tamannamotors158@gmail.com",
   contactPhone: "01626666906, 01878934956",
   address: "HAZIGONJ-KACHUA MAIN ROAD, WEST BAZAR, HAZIGONJ, CHANDPUR.",
   logoUrl: ""
@@ -415,21 +415,23 @@ export const DatabaseStorage = {
         u.username !== 'admin'
       );
 
-      // Ensure backend real MR MD SAHIDUL ISLAM user is present and active
+      // Ensure only the single real owner user from Supabase exists
       let foundOwner = users.find((u: any) => 
-        u && (u.username?.toLowerCase() === 'sahidul' || u.name?.toLowerCase().includes('sahidul') || u.id === 'usr-sahidul-owner')
+        u && (u.username?.toLowerCase() === 'sahidul' || u.name?.toLowerCase().includes('sahidul') || u.email?.toLowerCase().includes('tamanna') || u.uid === '9e4e8c95-81a0-4f73-9638-c6340427918e')
       );
       if (!foundOwner) {
-        users.unshift(DEFAULT_STAFF_USERS[0]);
+        users = [DEFAULT_STAFF_USERS[0]];
       } else {
-        foundOwner.name = 'MR MD SAHIDUL ISLAM';
+        foundOwner.id = '9e4e8c95-81a0-4f73-9638-c6340427918e';
+        foundOwner.uid = '9e4e8c95-81a0-4f73-9638-c6340427918e';
+        foundOwner.name = 'Md Sahidul islam';
         foundOwner.username = 'sahidul';
-        foundOwner.email = 'tamannamotors.bd@gmail.com';
-        foundOwner.password = foundOwner.password || 'admin';
-        foundOwner.phone = foundOwner.phone || '01878934956';
+        foundOwner.email = 'tamannamotors158@gmail.com';
+        foundOwner.phone = '+8801626666906';
         foundOwner.role = 'super_admin';
         foundOwner.status = 'Active';
         foundOwner.emailVerified = true;
+        users = [foundOwner];
       }
 
       return users;
@@ -455,29 +457,32 @@ export const DatabaseStorage = {
   // Current User
   loadCurrentUser(): AuthUser | null {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      const data = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('tamanna_current_session_user') : null;
       if (data) {
         const user: AuthUser = JSON.parse(data);
-        // Seamlessly upgrade any old mock user to MR MD SAHIDUL ISLAM Super Admin
-        if (user && (user.id === 'usr-admin-default' || user.username === 'admin' || user.id === 'usr-jubo-default' || user.username === 'jubair243')) {
-          this.saveCurrentUser(DEFAULT_STAFF_USERS[0]);
-          return DEFAULT_STAFF_USERS[0];
-        }
         if (user && user.username && user.id && user.status !== 'Suspended') {
           return user;
         }
       }
-      return DEFAULT_STAFF_USERS[0];
+      return null;
     } catch {
-      return DEFAULT_STAFF_USERS[0];
+      return null;
     }
   },
 
   saveCurrentUser(user: AuthUser | null) {
     if (user) {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('tamanna_current_session_user', JSON.stringify(user));
+        }
+      } catch {}
       safeSetLocalStorage(STORAGE_KEYS.CURRENT_USER, user);
     } else {
       try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.removeItem('tamanna_current_session_user');
+        }
         localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
       } catch {}
     }

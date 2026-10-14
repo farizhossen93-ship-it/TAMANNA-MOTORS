@@ -422,7 +422,7 @@ app.post('/api/users', async (req, res) => {
         target: schema.users.uid,
         set: {
           email: u.email || `${u.username}@tamannamotors.com`,
-          password: u.password || '',
+          ...(u.password ? { password: u.password } : {}),
           name: u.name || u.username,
           username: u.username,
           role: u.role || 'cashier',
@@ -465,7 +465,7 @@ app.post('/api/users/sync', async (req, res) => {
             target: schema.users.uid,
             set: {
               email: u.email || `${u.username}@tamannamotors.com`,
-              password: u.password || '',
+              ...(u.password ? { password: u.password } : {}),
               name: u.name || u.username,
               username: u.username,
               role: u.role || 'cashier',

@@ -114,6 +114,7 @@ export interface Sale {
 
 export interface AuthUser {
   id: string;
+  uid?: string;
   name: string;
   email: string;
   username: string;

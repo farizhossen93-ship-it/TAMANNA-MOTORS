@@ -40,10 +40,10 @@ export const SupabaseSync = {
         sku: product.sku,
         category: product.category,
         business_location: product.businessLocation || 'Hazigonj Branch',
-        unit_purchase_price: product.unitPurchasePrice,
-        selling_price: product.sellingPrice,
-        current_stock: product.currentStock,
-        alert_quantity: product.alertQuantity || 5,
+        unit_purchase_price: Math.round(Number(product.unitPurchasePrice) || 0),
+        selling_price: Math.round(Number(product.sellingPrice) || 0),
+        current_stock: Math.round(Number(product.currentStock) || 0),
+        alert_quantity: Math.round(Number(product.alertQuantity) || 5),
         image_url: product.imageUrl || '',
         created_at: product.createdAt || new Date().toISOString()
       }, { onConflict: 'id' });

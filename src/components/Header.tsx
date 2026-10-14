@@ -427,6 +427,19 @@ export const Header: React.FC<HeaderProps> = ({
           </kbd>
         </button>
 
+        {/* Prominent Direct Logout Button */}
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-1 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 transition-all cursor-pointer active:scale-95 shrink-0 shadow-xs"
+            title={lang === 'bn' ? 'লগআউট করুন' : 'Sign Out'}
+            aria-label="Sign Out"
+          >
+            <LogOut className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden md:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+          </button>
+        )}
+
         {/* User Profile Dropdown */}
         <div className="relative shrink-0">
           <button

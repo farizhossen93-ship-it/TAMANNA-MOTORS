@@ -336,9 +336,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar container */}
+      {/* Sidebar container - Fixed in place while data scrolls */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 flex flex-col border-r border-white/10 dark:border-white/5 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-2xl text-slate-200 transition-all duration-300 ease-in-out lg:static select-none shadow-2xl lg:shadow-none ${
+        className={`fixed lg:sticky top-0 bottom-0 left-0 h-screen z-40 flex flex-col shrink-0 border-r border-white/10 dark:border-white/5 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-2xl text-slate-200 transition-all duration-300 ease-in-out select-none shadow-2xl lg:shadow-none overflow-hidden ${
           isOpen
             ? 'w-72 sm:w-80 lg:w-64 xl:w-72 translate-x-0'
             : '-translate-x-full lg:w-20 lg:translate-x-0'

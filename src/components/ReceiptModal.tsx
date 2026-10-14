@@ -112,8 +112,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const businessName = businessSettings?.businessName || "TAMANNA MOTORS";
   const businessAddress = businessSettings?.address || "HAZIGONJ-KACHUA MAIN ROAD, WEST BAZAR, HAZIGONJ, CHANDPUR.";
   const businessPhone = businessSettings?.contactPhone || "01626666906, 01878934956";
-  const businessEmail = businessSettings?.contactEmail || "tamannamotors.bd@gmail.com";
-  const taxBin = businessSettings?.taxNumber || "BIN-002849102-0101";
+  const businessEmail = businessSettings?.contactEmail || "tamannamotors158@gmail.com";
+  const taxBin = businessSettings?.taxNumber || "";
   const footerNotes = invoiceSettings?.footerNotes || (lang === 'bn' ? "তামান্না মোটরসে কেনাকাটার জন্য আন্তরিক ধন্যবাদ! ১০০% জেনুইন পার্টসের বিশ্বস্ত প্রতিষ্ঠান।" : "Thank you for shopping at TAMANNA MOTORS! Your trusted motorcycle spares partner.");
   const terms = invoiceSettings?.termsAndConditions || (
     lang === 'bn' 
@@ -249,7 +249,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     const lines = [
       `=== ${businessName} ===`,
       businessAddress,
-      `Tel: ${businessPhone} | BIN: ${taxBin}`,
+      `Tel: ${businessPhone} | Email: ${businessEmail}`,
       `Branch: ${branchLocation}`,
       `Invoice: ${invoiceNo} | Date: ${dateStr}`,
       `Customer: ${customerName} | Cashier: ${cashierName}`,
@@ -299,64 +299,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
           </div>
 
-          {/* Action & Format Controls */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Format Switcher: A4 vs 80mm */}
-            <div className="flex items-center rounded-xl bg-slate-200/80 dark:bg-slate-800 p-1 text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setLayoutMode('a4')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  layoutMode === 'a4'
-                    ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <LayoutTemplate className="h-3.5 w-3.5" />
-                <span>{lang === 'bn' ? 'A4 সাইজ চালান' : 'A4 Invoice'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLayoutMode('thermal')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  layoutMode === 'thermal'
-                    ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Receipt className="h-3.5 w-3.5" />
-                <span>{lang === 'bn' ? '৮০মিমি স্লিপ' : '80mm POS'}</span>
-              </button>
-            </div>
-
-            {/* Custom Logo Upload */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shadow-xs cursor-pointer"
-                title={lang === 'bn' ? 'কাস্টম লোগো আপলোড করুন' : 'Upload custom logo'}
-              >
-                <Upload className="h-3.5 w-3.5 text-emerald-500" />
-                <span>{currentLogo ? (lang === 'bn' ? 'লোগো পরিবর্তন' : 'Change Logo') : (lang === 'bn' ? 'কাস্টম লোগো' : 'Upload Logo')}</span>
-              </button>
-              {currentLogo && (
-                <button
-                  onClick={handleRemoveLogo}
-                  className="flex h-7 w-7 items-center justify-center rounded-xl border border-rose-200 dark:border-rose-800 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors cursor-pointer"
-                  title="Remove Logo"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              onChange={handleLogoUpload}
-              className="hidden"
-            />
-
+          {/* Format & Close Controls */}
+          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
@@ -434,7 +378,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       </p>
                       <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
                         <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span>{businessEmail} · মূসক/BIN: <strong className="text-slate-800">{taxBin}</strong></span>
+                        <span>{businessEmail}</span>
                       </p>
                     </div>
                   </div>
@@ -767,7 +711,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   মোবাইল: {businessPhone}
                 </p>
                 <p className="text-[9px] text-slate-500">
-                  মূসক/BIN: {taxBin}
+                  {businessEmail}
                 </p>
               </div>
 
@@ -899,25 +843,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
 
         {/* Modal Action Footer Toolbar */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-xs cursor-pointer"
-            >
-              <ImageIcon className="h-3.5 w-3.5 text-emerald-500" />
-              <span>{lang === 'bn' ? 'লোগো বদলান' : 'Change Logo'}</span>
-            </button>
-
-            <button
-              onClick={handleCopyReceipt}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-xs cursor-pointer"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-              <span>{copied ? (lang === 'bn' ? 'কপি হয়েছে' : 'Copied') : (lang === 'bn' ? 'কপি টেক্সট' : 'Copy Text')}</span>
-            </button>
-          </div>
-
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/80 flex items-center justify-end gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownloadSlip}

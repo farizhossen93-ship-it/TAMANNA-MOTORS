@@ -41,13 +41,13 @@ export const SALES_LAST_30_DAYS: { day: string; date: string; amount: number }[]
 
 export const INITIAL_BUSINESS_SETTINGS: BusinessSettings = {
   businessName: "TAMANNA MOTORS",
-  taxNumber: "BIN-002849102-0101",
+  taxNumber: "",
   defaultCurrency: "BDT (৳)",
   currencySymbol: "৳",
   financialYearStart: "July",
   defaultTaxRate: 5.0,
   primaryLocation: "Hazigonj Branch",
-  contactEmail: "tamannamotors.bd@gmail.com",
+  contactEmail: "tamannamotors158@gmail.com",
   contactPhone: "01626666906, 01878934956",
   address: "HAZIGONJ-KACHUA MAIN ROAD, WEST BAZAR, HAZIGONJ, CHANDPUR.",
   logoUrl: ""

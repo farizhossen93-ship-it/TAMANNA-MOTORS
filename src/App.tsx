@@ -196,45 +196,49 @@ export default function App() {
           SupabaseSync.fetchExpenses(),
         ]);
 
-        if (userRes.status === 'fulfilled' && Array.isArray(userRes.value) && userRes.value.length > 0) {
+        if (sbUsers.status === 'fulfilled' && Array.isArray(sbUsers.value) && sbUsers.value.length > 0) {
+          const validSbUsers: AuthUser[] = sbUsers.value.map((u: any) => ({
+            id: u.uid || `usr-${u.id}`,
+            uid: u.uid || `usr-${u.id}`,
+            name: u.name || 'Md Sahidul islam',
+            username: u.username || 'sahidul',
+            email: u.email || 'tamannamotors158@gmail.com',
+            password: u.password || (u.username === 'sahidul' || u.email === 'tamannamotors158@gmail.com' ? 'khoka420' : ''),
+            phone: u.phone || '+8801626666906',
+            role: (u.role || 'super_admin') as UserRole,
+            businessLocation: u.businessLocation || u.business_location || 'Hazigonj Branch',
+            status: u.status || 'Active',
+            emailVerified: Boolean(u.emailVerified ?? true),
+            lastLogin: u.lastLogin || u.last_login || '12:12 PM'
+          }));
+          setStaffUsers(validSbUsers);
+          DatabaseStorage.saveStaffUsers(validSbUsers);
+          setCurrentUser(prev => {
+            if (!prev) return null;
+            const updated = validSbUsers.find(m => m.username?.toLowerCase() === prev.username?.toLowerCase() || m.email?.toLowerCase() === prev.email?.toLowerCase());
+            return updated || null;
+          });
+        } else if (userRes.status === 'fulfilled' && Array.isArray(userRes.value) && userRes.value.length > 0) {
           const mappedUsers: AuthUser[] = userRes.value.map((u: any) => ({
             id: u.uid || (u.id ? String(u.id) : `usr-${Date.now()}`),
             name: u.name || u.username,
             username: u.username,
             email: u.email || `${u.username}@tamannamotors.com`,
-            password: u.password || 'admin',
+            password: u.password || (u.username === 'sahidul' || u.email === 'tamannamotors158@gmail.com' ? 'khoka420' : ''),
             phone: u.phone || '01878934956',
             role: (u.role || 'super_admin') as UserRole,
             businessLocation: u.businessLocation || u.business_location || 'Hazigonj Branch',
             status: u.status || 'Active',
             emailVerified: Boolean(u.email_verified || (u.emailVerified ?? true)),
-            lastLogin: u.lastLogin || u.last_login || 'Today'
+            lastLogin: u.lastLogin || u.last_login || '12:12 PM'
           }));
-          // Use exact users from backend only
           setStaffUsers(mappedUsers);
           DatabaseStorage.saveStaffUsers(mappedUsers);
           setCurrentUser(prev => {
-            if (!prev || !mappedUsers.some(m => m.username?.toLowerCase() === prev.username?.toLowerCase() || m.email?.toLowerCase() === prev.email?.toLowerCase())) {
-              return mappedUsers[0];
-            }
-            return prev;
+            if (!prev) return null;
+            const updated = mappedUsers.find(m => m.username?.toLowerCase() === prev.username?.toLowerCase() || m.email?.toLowerCase() === prev.email?.toLowerCase());
+            return updated || null;
           });
-        } else if (sbUsers.status === 'fulfilled' && Array.isArray(sbUsers.value) && sbUsers.value.length > 0) {
-          const validSbUsers = sbUsers.value.filter(u => 
-            u.id !== 'usr-admin-default' && 
-            u.id !== 'usr-jubo-default' && 
-            u.username !== 'admin'
-          );
-          if (validSbUsers.length > 0) {
-            setStaffUsers(validSbUsers);
-            DatabaseStorage.saveStaffUsers(validSbUsers);
-            setCurrentUser(prev => {
-              if (!prev || !validSbUsers.some(m => m.username?.toLowerCase() === prev.username?.toLowerCase() || m.email?.toLowerCase() === prev.email?.toLowerCase())) {
-                return validSbUsers[0];
-              }
-              return prev;
-            });
-          }
         }
 
         if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value) && prodRes.value.length > 0) {
@@ -378,6 +382,28 @@ export default function App() {
   // Authentication & Staff User state
   const [staffUsers, setStaffUsers] = useState<AuthUser[]>(() => DatabaseStorage.loadStaffUsers());
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => DatabaseStorage.loadCurrentUser());
+
+  // 10-minute inactivity auto-logout timer
+  useEffect(() => {
+    if (!currentUser) return;
+    let timer: NodeJS.Timeout;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        handleLogout();
+      }, 10 * 60 * 1000); // 10 minutes
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [currentUser]);
+
   const [isInvoiceScanOpen, setIsInvoiceScanOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState<boolean>(false);
@@ -2313,7 +2339,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans transition-colors duration-150 relative">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased font-sans transition-colors duration-150 relative">
       {/* Subtle ambient glass mesh glow in dark mode */}
       <div className="fixed top-0 left-1/3 -translate-x-1/2 w-[600px] h-[300px] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed bottom-0 right-10 w-[500px] h-[300px] bg-cyan-500/5 dark:bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
